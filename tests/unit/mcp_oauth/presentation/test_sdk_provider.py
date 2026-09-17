@@ -11,6 +11,7 @@ from datetime import UTC, datetime, timedelta
 from urllib.parse import parse_qs, urlsplit
 
 import pytest
+import structlog
 from mcp.server.auth.provider import (
     AccessToken,
     AuthorizationParams,
@@ -20,7 +21,10 @@ from mcp.server.auth.provider import (
 )
 from mcp.shared.auth import OAuthClientInformationFull
 from pydantic import AnyUrl, TypeAdapter
+from sqlalchemy.exc import IntegrityError
 
+import safent_ads.mcp_oauth.presentation.sdk_provider as sdk_provider_module
+from safent_ads.logging_setup import _exception_type_only, redact_secrets
 from safent_ads.mcp_oauth.application.grant_consent import ApproveConsent
 from safent_ads.mcp_oauth.application.policy import (
     AUTHORIZATION_REQUEST_TTL,
@@ -269,6 +273,90 @@ async def test_authorize_rejects_state_over_512_characters() -> None:
             client, _authorization_params(code_challenge=challenge, state="x" * 513)
         )
     assert exc_info.value.error == "invalid_request"
+
+
+async def test_authorize_rejects_a_malformed_pkce_code_challenge() -> None:
+    """T049 (spec 008): el SDK (`sdk:handlers/authorize.py::
+    AuthorizationRequest`) solo exige `code_challenge_method = "S256"`, no
+    la FORMA de `code_challenge` -- un cliente que la manda mal formada
+    (ni 43 caracteres base64url) disparaba un `InvalidCodeChallengeError`
+    de dominio sin capturar en `SdkOAuthProvider._start()`, mismo 500
+    opaco que el `IntegrityError` de `resource`."""
+    fixture = _Fixture()
+    client = await fixture.register_client()
+    params = _authorization_params(code_challenge="not-a-valid-pkce-challenge")
+
+    with pytest.raises(AuthorizeError) as exc_info:
+        await fixture.provider.authorize(client, params)
+    assert exc_info.value.error == "invalid_request"
+
+
+class _FakeAsyncpgConstraintError(Exception):
+    """Sustituye a `asyncpg.exceptions.PostgresError`: solo el atributo que
+    `sdk_provider._constraint_name()` lee de verdad."""
+
+    def __init__(self, *, constraint_name: str) -> None:
+        super().__init__("constraint violation")
+        self.constraint_name = constraint_name
+
+
+def _crafted_integrity_error(*, constraint_name: str, client_secret_in_row: str) -> IntegrityError:
+    """Simula lo que produce el dialecto asyncpg de SQLAlchemy: `.orig`
+    lleva la fila entera (con datos del cliente) en el mensaje, colgada de
+    `__cause__.constraint_name` (`sdk_provider._constraint_name()` ya solo
+    lee ese atributo, nunca el mensaje)."""
+    cause = _FakeAsyncpgConstraintError(constraint_name=constraint_name)
+    orig = RuntimeError(f"Failing row contains ({client_secret_in_row}, ...)")
+    orig.__cause__ = cause
+    return IntegrityError("INSERT INTO oauth_authorization_requests ...", {}, orig)
+
+
+async def test_authorize_translates_an_unexpected_integrity_error_without_leaking_the_row() -> None:
+    """Revision de seguridad (PR 44, IMPORTANT-2): `error`, no `warning`
+    (tras T049 llegar aqui es un fallo real, no una condicion esperable) y
+    `exc_info=True` -- pero el processor `_exception_type_only`
+    (`logging_setup.py`) ya reduce cualquier `exc_info` al nombre del tipo,
+    asi que el mensaje crudo (con datos del cliente) nunca debe aparecer en
+    el registro capturado, solo `exception_type`/`constraint`."""
+    fixture = _Fixture()
+    client = await fixture.register_client()
+    _, challenge = _pkce_pair()
+    secret_marker = "s3cret-client-supplied-value"  # noqa: S105 - marcador de prueba, no un secreto
+    crafted = _crafted_integrity_error(
+        constraint_name="oauth_authorization_requests_resource_check",
+        client_secret_in_row=secret_marker,
+    )
+
+    async def _raise_integrity_error(_request: object) -> None:
+        raise crafted
+
+    # Mismos processors que `logging_setup.py::configure_logging` aplica en
+    # produccion ANTES del `JSONRenderer` (`_exception_type_only` reduce
+    # `exc_info=True` al nombre del tipo; `redact_secrets` enmascara por
+    # clave/patron) -- `capture_logs()` por defecto los desactiva TODOS, asi
+    # que sin pasarlos aqui la prueba no confirmaria nada sobre produccion.
+    with (
+        structlog.testing.capture_logs(processors=[_exception_type_only, redact_secrets]) as logs,
+        pytest.MonkeyPatch.context() as monkeypatch,
+    ):
+        monkeypatch.setattr(sdk_provider_module, "logger", structlog.get_logger())
+        monkeypatch.setattr(
+            fixture.session.authorization_requests, "create", _raise_integrity_error
+        )
+        params = _authorization_params(code_challenge=challenge)
+        with pytest.raises(AuthorizeError) as exc_info:
+            await fixture.provider.authorize(client, params)
+
+    assert exc_info.value.error == "invalid_request"
+    assert exc_info.value.error_description == "no se pudo crear la solicitud de autorizacion"
+
+    [entry] = [log for log in logs if log["event"] == "mcp_oauth_authorize_integrity_violation"]
+    assert entry["log_level"] == "error"
+    assert entry["constraint"] == "oauth_authorization_requests_resource_check"
+    assert entry["error_type"] == "IntegrityError"
+    serialized = repr(entry)
+    assert secret_marker not in serialized
+    assert "Failing row" not in serialized
 
 
 async def test_authorize_rejects_unknown_client() -> None:

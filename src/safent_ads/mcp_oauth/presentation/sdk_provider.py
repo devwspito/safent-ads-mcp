@@ -82,6 +82,7 @@ from safent_ads.mcp_oauth.domain.errors import (
     EmptyScopeSetError,
     GrantRevokedError,
     InvalidClientNameError,
+    InvalidCodeChallengeError,
     InvalidRedirectUriError,
     RefreshTokenReusedError,
     ScopeExpansionError,
@@ -252,6 +253,44 @@ class SdkOAuthProvider:
             ) from exc
         except (EmptyScopeSetError, UnknownScopeError) as exc:
             raise AuthorizeError(error="invalid_scope", error_description=str(exc)) from exc
+        except InvalidCodeChallengeError as exc:
+            # El SDK (`sdk:handlers/authorize.py::AuthorizationRequest`) solo
+            # exige `code_challenge_method = "S256"`; la FORMA del propio
+            # `code_challenge` (43 base64url, RFC 7636) no la valida -- sin
+            # este `except`, un cliente que la manda mal formada tira un
+            # `InvalidCodeChallengeError` de dominio sin capturar (revision
+            # de seguridad T049): mismo 500 opaco que el `IntegrityError` de
+            # abajo, por una condicion que el cliente SI puede corregir.
+            raise AuthorizeError(error="invalid_request", error_description=str(exc)) from exc
+        except IntegrityError as exc:
+            # T049 (spec 008): un `resource`/`redirect_uri` que pasa la
+            # validacion de aplicacion pero sigue violando un CHECK de
+            # `oauth_authorization_requests` (0035_mcp_oauth) no debe escapar
+            # como el `IntegrityError` crudo que el catch-all de
+            # `sdk:handlers/authorize.py` convierte en un 500 `server_error`
+            # -- solo `error_type`/el nombre del constraint al registro
+            # (nunca la fila, que lleva valores del cliente).
+            #
+            # Revision de seguridad (PR 44, IMPORTANT-2): `error`, no
+            # `warning` -- tras 0054/`ResourceIndicator` (T049), llegar
+            # aqui ya no deberia ser posible con la validacion de aplicacion
+            # al dia, asi que es una falla real que requiere investigar, no
+            # una condicion esperable del cliente. `exc_info=True` para que
+            # quien investigue tenga rastro de DONDE goleo -- el processor
+            # `_exception_type_only` (`logging_setup.py`) ya reduce
+            # cualquier `exc_info` al nombre del tipo antes de serializar,
+            # asi que ni la fila ni el mensaje crudo (que trae valores del
+            # cliente) llegan al log de todas formas.
+            logger.error(
+                "mcp_oauth_authorize_integrity_violation",
+                error_type=type(exc).__name__,
+                constraint=_constraint_name(exc),
+                exc_info=True,
+            )
+            raise AuthorizeError(
+                error="invalid_request",
+                error_description="no se pudo crear la solicitud de autorizacion",
+            ) from exc
 
     # --- codigo de autorizacion -----------------------------------------
 
@@ -459,6 +498,17 @@ class SdkOAuthProvider:
 
     def _open(self) -> AbstractAsyncContextManager[OAuthSession]:
         return self._session_factory()
+
+
+def _constraint_name(exc: IntegrityError) -> str | None:
+    """Nombre del CHECK/UNIQUE que violo el driver, sin arrastrar la fila
+    (`asyncpg.exceptions.PostgresError.constraint_name`, colgado de
+    `exc.orig.__cause__` en el dialecto asyncpg de SQLAlchemy) -- lo unico
+    seguro de registrar de un `IntegrityError`, cuyo mensaje por defecto
+    lleva los valores que el cliente mando."""
+    cause = getattr(exc.orig, "__cause__", None)
+    name = getattr(cause, "constraint_name", None)
+    return name if isinstance(name, str) else None
 
 
 def _to_sdk_client(client: OAuthClient) -> LoopbackAwareClientInformation:

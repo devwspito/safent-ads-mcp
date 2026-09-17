@@ -170,3 +170,18 @@ def test_rejects_a_code_challenge_longer_than_43_base64url_chars() -> None:
     (0035_mcp_oauth); el dominio aceptaba hasta 128 por error."""
     with pytest.raises(InvalidCodeChallengeError):
         _request(code_challenge=_s256_challenge(_CODE_VERIFIER) + "x" * 85)
+
+
+def test_the_rejected_code_challenge_never_enters_the_error_message() -> None:
+    """Revision de seguridad (PR 44, MINOR c): `SdkOAuthProvider._start()`
+    reenvia este mensaje tal cual en la redireccion 302 de vuelta al
+    cliente (`AuthorizeError.error_description`), que puede acabar en un
+    log de borde que capture el `Location` -- mismo criterio que
+    `RedirectUri._reject_control_characters`, el valor NO entra en el
+    mensaje."""
+    poisoned_value = "esto-no-deberia-aparecer-en-ningun-sitio"
+
+    with pytest.raises(InvalidCodeChallengeError) as exc_info:
+        _request(code_challenge=poisoned_value)
+
+    assert poisoned_value not in str(exc_info.value)

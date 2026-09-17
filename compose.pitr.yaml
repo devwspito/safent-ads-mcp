@@ -15,8 +15,8 @@
 # limite si nadie lo poda -- esta rama (T125) entrega el INTERRUPTOR
 # documentado, no la politica de retencion/purga de `/wal-archive`
 # (T125 tasks.md solo pide "PITR note", no un pruning automatico). Quien
-# active este perfil asume vigilar `safent-ads-wal-archive` (tamano,
-# antiguedad) hasta que exista esa segunda pieza.
+# active este perfil asume vigilar el volumen `wal-archive-data` (`docker
+# volume ls`; tamano, antiguedad) hasta que exista esa segunda pieza.
 #
 # `archive_command`: `test ! -f ... && cp` es la receta minima que
 # documenta la propia guia de Postgres para no pisar un segmento ya
@@ -42,6 +42,8 @@ services:
     volumes:
       - wal-archive-data:/wal-archive
 
+# Sin `name:` fijo, mismo motivo que `compose.yaml` (T049, revisión de
+# PR 45): derivado del proyecto (`<proyecto>_wal-archive-data`) para que
+# una segunda instancia en el mismo host no colisione con esta.
 volumes:
   wal-archive-data:
-    name: safent-ads-wal-archive

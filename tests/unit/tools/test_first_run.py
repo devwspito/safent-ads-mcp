@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import pty
 import shutil
 import socket
 import subprocess
@@ -221,6 +222,62 @@ class TestTheThirdQuestionNeverEatsAnotherSecret:
         assert _env_values(tmp_path / "secrets/broker.env")["ADS_COMPOSIO_API_KEY"] == (
             "primera-clave"
         )
+
+
+class TestStdinSecretsPreserveWhitespace:
+    """Revisión de seguridad PR 45: `.strip()` recortaba CUALQUIER
+    espacio de los dos extremos, no solo el salto de línea que añade la
+    propia tubería -- una contraseña con un espacio inicial/final a
+    propósito quedaba guardada sin él, y el dueño nunca volvía a
+    coincidir con lo que de verdad tecleó la primera vez."""
+
+    def test_leading_and_trailing_spaces_survive(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr("sys.stdin", _PipedStdin(" con-espacios-en-los-bordes "))
+
+        assert first_run._read_stdin_secret("--x") == " con-espacios-en-los-bordes "
+
+    def test_exactly_one_trailing_newline_is_removed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """El artefacto que deja `echo "$p" | ...` en vez de
+        `printf '%s' "$p" | ...` (README): se quita, no es contenido."""
+        monkeypatch.setattr("sys.stdin", _PipedStdin("valor\n"))
+
+        assert first_run._read_stdin_secret("--x") == "valor"
+
+    def test_a_trailing_crlf_is_removed_as_one_unit(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("sys.stdin", _PipedStdin("valor\r\n"))
+
+        assert first_run._read_stdin_secret("--x") == "valor"
+
+    def test_an_owner_password_with_edge_spaces_registers_intact(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        password = " una-contraseña-con-espacios-de-verdad "  # noqa: S105 -- valor del test
+        _run_with_answers(tmp_path)
+        monkeypatch.setattr(first_run, "_existing_owner_email", lambda _dsn: None)
+        registered: list[tuple[str, str]] = []
+
+        async def fake_upsert(*, dsn: str, email: str, password: str) -> None:
+            registered.append((email, password))
+
+        monkeypatch.setattr(first_run, "upsert_owner_password", fake_upsert)
+        monkeypatch.setattr("sys.stdin", _PipedStdin(password))
+        args = first_run._parse_args(
+            ["--workspace", str(tmp_path), "--owner-email", _OWNER_EMAIL, "--password-stdin"]
+        )
+        answers = first_run.Answers(
+            public_base_url=_PUBLIC_BASE_URL,
+            owner_email=_OWNER_EMAIL,
+            composio_api_key=None,
+            image=None,
+        )
+
+        first_run._register_owner(tmp_path, args, answers, RecordingPrompter().as_prompter())
+
+        assert registered == [(_OWNER_EMAIL, password)]
 
 
 class _PipedStdin:
@@ -462,7 +519,10 @@ class TestInvariant4AtMostThreeQuestions:
 
     def _answers(self) -> first_run.Answers:
         return first_run.Answers(
-            public_base_url=_PUBLIC_BASE_URL, owner_email=_OWNER_EMAIL, composio_api_key=None
+            public_base_url=_PUBLIC_BASE_URL,
+            owner_email=_OWNER_EMAIL,
+            composio_api_key=None,
+            image=None,
         )
 
     def _registered_owners(
@@ -567,6 +627,37 @@ class TestInvariant7DryRunHasNoEffects:
         assert list(tmp_path.iterdir()) == []
 
 
+class TestValidatePublicBaseUrl:
+    """T049 (spec 008): mismo conjunto cerrado de bucle local que
+    `composition/settings.py::ApiSettings._is_allowed_public_base_url_origin`
+    -- un desajuste entre los dos deja al asistente rechazando en el
+    primer arranque una URL que el servidor aceptaria despues."""
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://ads.example.com",
+            "http://127.0.0.1:8410",
+            "http://localhost:8410",
+            "http://[::1]:8410",
+        ],
+    )
+    def test_accepts_https_and_every_loopback_literal(self, url: str) -> None:
+        assert first_run._validate_public_base_url(url) == url
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://ads.example.com",
+            "http://127.0.0.1.evil.example:8410",
+            "ftp://127.0.0.1:8410",
+        ],
+    )
+    def test_rejects_http_that_is_not_loopback(self, url: str) -> None:
+        with pytest.raises(ValueError, match="URL inválida"):
+            first_run._validate_public_base_url(url)
+
+
 class TestSummary:
     def test_the_panel_keeps_the_scheme_of_the_instance(
         self, capsys: pytest.CaptureFixture[str]
@@ -577,6 +668,7 @@ class TestSummary:
             public_base_url="http://127.0.0.1:8410",
             owner_email=_OWNER_EMAIL,
             composio_api_key=None,
+            image=None,
         )
 
         first_run._print_summary(answers, _OWNER_EMAIL)
@@ -589,7 +681,10 @@ class TestSummary:
         self, capsys: pytest.CaptureFixture[str]
     ) -> None:
         answers = first_run.Answers(
-            public_base_url=_PUBLIC_BASE_URL, owner_email=_OWNER_EMAIL, composio_api_key=None
+            public_base_url=_PUBLIC_BASE_URL,
+            owner_email=_OWNER_EMAIL,
+            composio_api_key=None,
+            image=None,
         )
 
         first_run._print_summary(answers, _OWNER_EMAIL)
@@ -862,6 +957,111 @@ class TestALostBrokerFile:
         assert "almacén cifrado" not in capsys.readouterr().out
 
 
+class TestImageSelection:
+    """`--image`/`ADS_IMAGE` (spec 008 T049: la imagen publicada nunca es la
+    que corre `make up`). No es una de las tres preguntas -- nunca se
+    pregunta -- y una instalación que no la toca no debe ganar una clave
+    inerte en `.env`: `compose.yaml` ya trae su propio valor por omisión."""
+
+    _IMAGE = "ghcr.io/devwspito/safent-ads-mcp@sha256:" + "0" * 64
+
+    def test_untouched_leaves_no_key_in_dotenv(self, tmp_path: Path) -> None:
+        assert _run_with_answers(tmp_path) == first_run.EXIT_OK
+
+        assert "ADS_IMAGE" not in _env_values(tmp_path / ".env")
+
+    def test_the_flag_is_written_to_dotenv(self, tmp_path: Path) -> None:
+        assert _run_with_answers(tmp_path, "--image", self._IMAGE) == first_run.EXIT_OK
+
+        assert _env_values(tmp_path / ".env")["ADS_IMAGE"] == self._IMAGE
+
+    def test_the_environment_variable_is_read_when_the_flag_is_absent(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """`scripts/primer-arranque.sh` exporta `ADS_IMAGE` y reenvía
+        `--image` dentro de `"$@"` -- pero un consumidor que solo exportara
+        la variable (sin el flag) tiene que quedar cubierto igual."""
+        monkeypatch.setenv("ADS_IMAGE", self._IMAGE)
+
+        assert _run_with_answers(tmp_path) == first_run.EXIT_OK
+
+        assert _env_values(tmp_path / ".env")["ADS_IMAGE"] == self._IMAGE
+
+    def test_a_second_pass_keeps_the_one_already_written(self, tmp_path: Path) -> None:
+        assert _run_with_answers(tmp_path, "--image", self._IMAGE) == first_run.EXIT_OK
+
+        assert _run_with_answers(tmp_path) == first_run.EXIT_OK
+
+        assert _env_values(tmp_path / ".env")["ADS_IMAGE"] == self._IMAGE
+
+    def test_a_tag_without_digest_is_accepted_but_warns(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        image = "ghcr.io/devwspito/safent-ads-mcp:v1.0.0"
+
+        assert _run_with_answers(tmp_path, "--image", image) == first_run.EXIT_OK
+
+        printed = capsys.readouterr().err
+        assert "sin digest" in printed
+
+
+class TestImageRefInjection:
+    """CWE-74 (revisión de seguridad PR 45): `--image`/`ADS_IMAGE` sin
+    validar acababa tal cual en una línea `ADS_IMAGE=<valor>` de `.env`
+    -- un valor con un `\\n` incrustado inyectaba una clave nueva que
+    gana en cada `make up` siguiente. `docker compose config -q` no
+    rechaza esto: la línea nueva es sintaxis `.env` perfectamente válida,
+    solo que nadie la escribió a propósito."""
+
+    def test_a_newline_injection_exits_1_and_never_touches_dotenv(self, tmp_path: Path) -> None:
+        payload = "ghcr.io/x@sha256:" + "0" * 64 + "\nADS_TZ=UTC"
+
+        assert _run_with_answers(tmp_path, "--image", payload) == first_run.EXIT_USAGE
+
+        assert not (tmp_path / ".env").exists()
+
+    def test_a_semicolon_is_rejected(self, tmp_path: Path) -> None:
+        assert _run_with_answers(tmp_path, "--image", "safent-ads:local; rm -rf /") == (
+            first_run.EXIT_USAGE
+        )
+
+    def test_a_space_is_rejected(self, tmp_path: Path) -> None:
+        assert _run_with_answers(tmp_path, "--image", "ghcr.io/x y") == first_run.EXIT_USAGE
+
+    @pytest.mark.parametrize(
+        "ref",
+        [
+            "ghcr.io/devwspito/safent-ads-mcp",
+            "ghcr.io/devwspito/safent-ads-mcp:v1.0.0",
+            "ghcr.io/devwspito/safent-ads-mcp@sha256:" + "a" * 64,
+            "safent-ads:local",
+        ],
+    )
+    def test_valid_references_still_pass(self, tmp_path: Path, ref: str) -> None:
+        assert _run_with_answers(tmp_path, "--image", ref) == first_run.EXIT_OK
+
+    def test_a_composio_key_with_an_embedded_newline_is_rejected(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Mismo vector, otro origen: `_read_stdin_secret` solo recorta
+        los extremos (`.strip()`) -- un `\\n` INTERNO sobrevive hasta
+        `_merge_env_text`, que es quien de verdad decide qué se escribe."""
+        payload = "composio-key\nADS_COMPOSIO_API_KEY_2=inyectada"
+        monkeypatch.setattr("sys.stdin", _PipedStdin(payload))
+
+        exit_code = _run(
+            tmp_path,
+            "--public-base-url",
+            _PUBLIC_BASE_URL,
+            "--owner-email",
+            _OWNER_EMAIL,
+            "--composio-api-key-stdin",
+        )
+
+        assert exit_code == first_run.EXIT_USAGE
+        assert not (tmp_path / "secrets/broker.env").exists()
+
+
 class TestFederatedOwnerBranch:
     def _api_env(self, workspace: Path, content: str) -> None:
         (workspace / "secrets").mkdir(parents=True, exist_ok=True)
@@ -1079,16 +1279,40 @@ def _environment_of(log: Path, call: str) -> list[str]:
     return collected
 
 
-def _run_wrapper(path_dir: Path, *extra: str) -> subprocess.CompletedProcess[str]:
+def _run_wrapper(
+    path_dir: Path, *extra: str, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(  # noqa: S603 -- ruta fija del repo, sin shell
         [str(_REPO_ROOT / "scripts/primer-arranque.sh"), *extra],
         capture_output=True,
         text=True,
-        env={"PATH": str(path_dir), "HOME": str(path_dir.parent)},
+        env={"PATH": str(path_dir), "HOME": str(path_dir.parent), **(env or {})},
         stdin=subprocess.DEVNULL,
         check=False,
         timeout=60,
     )
+
+
+def _run_wrapper_with_a_terminal(
+    path_dir: Path, *extra: str
+) -> subprocess.CompletedProcess[str]:
+    """Igual que `_run_wrapper`, pero con un terminal de verdad en stdin:
+    es la única forma de ejercitar la rama `[ -t 0 ]` del envoltorio
+    (mismo patrón que `test_instalar_mcp.py::run_with_a_terminal`)."""
+    controller, terminal = pty.openpty()
+    try:
+        return subprocess.run(  # noqa: S603 -- ruta fija del repo, sin shell
+            [str(_REPO_ROOT / "scripts/primer-arranque.sh"), *extra],
+            capture_output=True,
+            text=True,
+            env={"PATH": str(path_dir), "HOME": str(path_dir.parent)},
+            stdin=terminal,
+            check=False,
+            timeout=60,
+        )
+    finally:
+        os.close(terminal)
+        os.close(controller)
 
 
 class TestWrapper:
@@ -1186,3 +1410,119 @@ class TestWrapper:
 
         assert result.returncode == first_run.EXIT_PREFLIGHT
         assert "docker" in result.stderr
+
+
+class TestWrapperForwardsTheImage:
+    """Bug real (revisión de PR 45, T049): `ADS_IMAGE` exportada antes de
+    invocar el envoltorio nunca llegaba a `first_run` -- `docker compose
+    run` no reenvía el entorno del host al contenedor salvo lo que
+    `compose.yaml` declara explícitamente (`x-ads-app-env` no lleva
+    `ADS_IMAGE`), así que `_resolve_image` leía `os.environ` vacío dentro
+    del contenedor y `.env` se quedaba sin la clave.
+
+    `TestImageSelection` (arriba) prueba que `first_run`, DADO `--image`
+    en argv, lo escribe en `.env` -- eso ya eran píldoras reales, sin
+    doble. Lo que faltaba, y es lo que se prueba aquí, es que el
+    envoltorio de verdad AÑADE `--image` a lo que le pasa a `first_run`
+    cuando la única pista es `ADS_IMAGE` en el entorno: las dos piezas
+    juntas cierran el camino completo sin necesitar un contenedor real."""
+
+    _IMAGE = "ghcr.io/devwspito/safent-ads-mcp@sha256:" + "0" * 64
+
+    def test_ads_image_alone_is_forwarded_as_a_flag_to_both_steps(
+        self, tmp_path: Path
+    ) -> None:
+        log = tmp_path / "docker.log"
+        path_dir = _fake_docker_bin(tmp_path / "bin", log)
+
+        result = _run_wrapper(path_dir, "--no-composio", env={"ADS_IMAGE": self._IMAGE})
+
+        assert result.returncode == 0, result.stderr
+        calls = _calls(log)
+        first_run_calls = [call for call in calls if "first_run" in call]
+        assert len(first_run_calls) == 2
+        for call in first_run_calls:
+            assert f"--image {self._IMAGE}" in call
+
+    def test_an_explicit_image_flag_is_never_duplicated(self, tmp_path: Path) -> None:
+        log = tmp_path / "docker.log"
+        path_dir = _fake_docker_bin(tmp_path / "bin", log)
+
+        result = _run_wrapper(
+            path_dir,
+            "--no-composio",
+            "--image",
+            self._IMAGE,
+            env={"ADS_IMAGE": self._IMAGE},
+        )
+
+        assert result.returncode == 0, result.stderr
+        first_run_calls = [call for call in _calls(log) if "first_run" in call]
+        for call in first_run_calls:
+            assert call.count("--image") == 1
+
+    def test_without_ads_image_nothing_is_added(self, tmp_path: Path) -> None:
+        log = tmp_path / "docker.log"
+        path_dir = _fake_docker_bin(tmp_path / "bin", log)
+
+        result = _run_wrapper(path_dir, "--no-composio")
+
+        assert result.returncode == 0, result.stderr
+        first_run_calls = [call for call in _calls(log) if "first_run" in call]
+        for call in first_run_calls:
+            assert "--image" not in call
+
+
+class TestWrapperExitCodesMatchTheContract:
+    """`contracts/first-run-cli.md` / README "Primer arranque": 1 es uso
+    incorrecto, 2 es preflight (docker/entorno). Revisión de PR 45:
+    `--password-stdin`/`--composio-api-key-stdin` sin una tubería real es
+    justo lo que `first_run._read_stdin_secret` clasifica como
+    `UsageError` (exit 1) cuando el mismo caso llega DENTRO del
+    contenedor -- el envoltorio tiene que estar de acuerdo consigo mismo."""
+
+    def test_password_stdin_with_a_real_terminal_exits_1(self, tmp_path: Path) -> None:
+        log = tmp_path / "docker.log"
+        path_dir = _fake_docker_bin(tmp_path / "bin", log)
+
+        result = _run_wrapper_with_a_terminal(path_dir, "--password-stdin", "--no-composio")
+
+        assert result.returncode == first_run.EXIT_USAGE, result.stderr
+        assert "tubería" in result.stderr
+
+    def test_composio_api_key_stdin_with_a_real_terminal_exits_1(self, tmp_path: Path) -> None:
+        log = tmp_path / "docker.log"
+        path_dir = _fake_docker_bin(tmp_path / "bin", log)
+
+        result = _run_wrapper_with_a_terminal(path_dir, "--composio-api-key-stdin")
+
+        assert result.returncode == first_run.EXIT_USAGE, result.stderr
+        assert "tubería" in result.stderr
+
+
+class TestWrapperRejectsAMalformedImageRef:
+    """Espejo en el envoltorio de `TestImageRefInjection` (CWE-74,
+    revisión de seguridad PR 45): `$IMAGEN` pasa por `docker image
+    inspect`/`pull`/`build` de este mismo script antes de que `first_run`
+    la vea -- vale la pena rechazarla aquí también."""
+
+    def test_a_newline_injection_exits_1_before_touching_docker(self, tmp_path: Path) -> None:
+        log = tmp_path / "docker.log"
+        path_dir = _fake_docker_bin(tmp_path / "bin", log)
+        payload = "ghcr.io/x@sha256:" + "0" * 64 + "\nADS_DATABASE_URL=evil"
+
+        result = _run_wrapper(path_dir, "--dry-run", "--image", payload)
+
+        assert result.returncode == first_run.EXIT_USAGE, result.stderr
+        # La validación corre ANTES de que el script toque `docker` por
+        # primera vez: el doble ni siquiera llega a crear el log.
+        assert not log.exists() or _calls(log) == []
+
+    def test_a_valid_digest_reference_still_works(self, tmp_path: Path) -> None:
+        log = tmp_path / "docker.log"
+        path_dir = _fake_docker_bin(tmp_path / "bin", log)
+        image = "ghcr.io/devwspito/safent-ads-mcp@sha256:" + "0" * 64
+
+        result = _run_wrapper(path_dir, "--dry-run", "--image", image)
+
+        assert result.returncode == 0, result.stderr

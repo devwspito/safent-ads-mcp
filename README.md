@@ -43,7 +43,8 @@ Caddy, nginx o cualquier otro proxy con TLS valen igual. Dos consecuencias:
 ## Instalar
 
 ```bash
-git clone <url-del-repo> safent-ads && cd safent-ads
+git clone https://github.com/devwspito/safent-ads-mcp.git safent-ads && cd safent-ads
+git checkout vX.Y.Z   # el tag cuya imagen vas a verificar abajo
 ```
 
 ## Verificar la imagen publicada
@@ -55,37 +56,110 @@ OIDC de GitHub Actions y la firma queda registrada en el log público de
 procedencia SLSA completa y un SBOM SPDX como *attestations* del propio
 manifiesto.
 
-Sustituye `<owner>/<repo>` por la ruta de este repositorio en GitHub, en
-minúsculas (`ghcr.io/${GITHUB_REPOSITORY,,}` en el propio `release.yml` —
-GHCR rechaza mayúsculas, así que coincide siempre con la URL del repo pero
-en minúsculas):
-
 ```bash
-cosign verify "ghcr.io/<owner>/<repo>@<digest>" \
-  --certificate-identity-regexp '^https://github.com/<owner>/<repo>/\.github/workflows/release\.yml@refs/tags/v' \
+cosign verify "ghcr.io/devwspito/safent-ads-mcp@<digest>" \
+  --certificate-identity-regexp '^https://github.com/devwspito/safent-ads-mcp/\.github/workflows/release\.yml@refs/tags/v' \
   --certificate-oidc-issuer https://token.actions.githubusercontent.com
 ```
 
-Verifica siempre por **digest** (`docker buildx imagetools inspect
-ghcr.io/<owner>/<repo>:vX.Y.Z --format '{{.Manifest.Digest}}'` si solo tienes
-el tag a mano), nunca por tag: un tag es mutable, un digest no. Comprobar la
-procedencia y el SBOM antes de confiar en una imagen:
+Verifica siempre por **digest**, nunca por tag: un tag es mutable, un digest
+no. Si solo tienes el tag a mano, resuélvelo primero — `--format
+'{{.Manifest.Digest}}'` no imprime nada en algunas versiones de buildx (por
+ejemplo 0.31.1, que solo saca la salida en texto plano); `awk` sobre esa
+salida funciona en todas:
 
 ```bash
-docker buildx imagetools inspect "ghcr.io/<owner>/<repo>@<digest>" --format '{{ json .Provenance }}'
-docker buildx imagetools inspect "ghcr.io/<owner>/<repo>@<digest>" --format '{{ json .SBOM }}'
+digest="$(docker buildx imagetools inspect ghcr.io/devwspito/safent-ads-mcp:vX.Y.Z \
+  | awk '/^Digest:/{print $2; exit}')"
+```
+
+Comprobar la procedencia y el SBOM antes de confiar en una imagen:
+
+```bash
+docker buildx imagetools inspect "ghcr.io/devwspito/safent-ads-mcp@<digest>" --format '{{ json .Provenance }}'
+docker buildx imagetools inspect "ghcr.io/devwspito/safent-ads-mcp@<digest>" --format '{{ json .SBOM }}'
+```
+
+Con la firma comprobada, deja la referencia exacta a mano para el paso
+siguiente. Comillas simples a propósito: una referencia con `;`, `` ` `` o
+`$(...)` pegada de algún sitio no debe ejecutarse en tu shell.
+
+```bash
+export ADS_IMAGE='ghcr.io/devwspito/safent-ads-mcp@<digest>'
 ```
 
 ## Primer arranque
 
-Un paso por línea.
+`make first-run` hace todo esto en un solo comando: genera `.env`,
+`secrets/api.env`, `secrets/broker.env` y `config/caps.yaml` con material
+aleatorio (cero credenciales de fábrica), levanta `ads-db → migraciones →
+ads-broker/ads-api/ads-worker`, te da de alta como dueño y espera a que
+`ads-api` responda sano.
+
+Con `ADS_IMAGE` ya exportada (paso anterior), un solo comando la usa: nunca
+compila, siempre descarga esa imagen exacta si todavía no la tienes.
+
+```bash
+make first-run
+```
+
+Queda escrita en `.env`, así que un `make up` posterior reutiliza la misma
+imagen verificada. **Alternativa: compilar de fuente.** Sin `ADS_IMAGE`
+exportada, `make first-run` construye `safent-ads:local` con el
+`Containerfile` de este repo en vez de descargar nada.
+
+`ADS_IMAGE` (variable de entorno, arriba) es la vía recomendada: nunca
+pasa por el intérprete de `make`. El equivalente en línea de comandos es
+`--image <ref>` (`./scripts/primer-arranque.sh --image '<ref>'`, o `make
+first-run ARGS="--image '<ref>'"` si usas `make`) — pero `ARGS` la
+expande tu shell **dos veces** (una vez al construir la línea, otra dentro
+del `Makefile`): una referencia copiada de un sitio que no controlas y que
+trajera `;`, `` ` `` o `$(...)` se ejecutaría como si la hubieras tecleado
+tú. Prefiere siempre `ADS_IMAGE=... make first-run`.
+
+Pide como mucho tres cosas —URL pública, tu correo y, si quieres conectar
+cuentas en un clic, la clave de Composio (Enter la omite)— más tu
+contraseña de dueño si el login federado con Google está apagado, que es
+el caso por omisión. Vuelve a ejecutarlo tantas veces como haga falta: una
+segunda pasada no reescribe ni regenera nada de lo que ya existe.
+
+Automatizado (CI, sin terminal): la contraseña del dueño entra por stdin,
+nunca por argumento.
+
+```bash
+IFS= read -rsp 'Contraseña del dueño: ' p
+printf '%s' "$p" | make first-run ARGS="--password-stdin --public-base-url https://ads.example.com --owner-email tu@correo.com --no-composio"
+unset p
+```
+
+`IFS=` importa: sin ella, `read` recorta espacios al principio o al final
+de lo que tecleas — si tu contraseña lleva uno a propósito, lo pierdes en
+silencio y la próxima vez que la escribas no coincidirá.
+
+`POST /mcp` sin credencial responde `401`: es la respuesta correcta, la puerta
+pide autorización. `/mcp` no se abre en el navegador; la interfaz para
+personas es el panel, en la URL pública que diste arriba.
+
+| Código de salida | Significado |
+|---|---|
+| `0` | Éxito, incluida una segunda pasada que no hizo nada. |
+| `1` | Uso incorrecto: flag desconocido o valor inválido. |
+| `2` | Preflight: Docker ausente o parado, puerto 8410 ocupado, `compose.yaml` inválido, o sin espacio/permiso para escribir. |
+| `3` | Un fichero ya existente es incoherente (el mensaje nombra fichero y clave). |
+| `4` | La pila no llegó a estar sana (el mensaje nombra el servicio). |
+| `5` | No se pudo dar de alta al dueño: sin terminal y sin `--password-stdin`, o correo rechazado. |
+| `6` | Permisos: no se pudo fijar 0600, `secrets/` escribible por grupo/otros, o un fichero gestionado es un enlace simbólico. |
+
+### A mano, sin `make first-run`
+
+Un paso por línea, si prefieres ver cada fichero antes de arrancar.
 
 ```bash
 cp .env.example .env
 cp secrets/api.env.example secrets/api.env
 cp secrets/broker.env.example secrets/broker.env
 cp config/caps.example.yaml config/caps.yaml
-chmod 600 secrets/api.env secrets/broker.env
+chmod 600 .env secrets/api.env secrets/broker.env
 openssl rand -base64 32                                                    # un valor nuevo por cada clave `change-me` de 32 bytes
 docker compose run --rm --no-deps ads-api python -m safent_ads.tools.gen_keys
 ```
@@ -101,7 +175,7 @@ Borra de `config/caps.yaml` la cuenta de ejemplo `"example_platform_account_id"`
 (vacío, con las llaves): sin cuentas con tope no se escribe nada, que es el punto.
 
 ```bash
-make check-secrets                                                         # permisos 0600 y ningún `change-me` suelto
+make check-secrets                                                         # permisos 0600 y ningún valor de plantilla sin sustituir
 make up                                                                    # ads-db → migraciones → ads-broker/ads-api/ads-worker
 curl -fsS http://127.0.0.1:8410/api/v1/health
 ```
@@ -109,7 +183,7 @@ curl -fsS http://127.0.0.1:8410/api/v1/health
 Date de alta como dueño. La contraseña entra por stdin: nunca por argumento.
 
 ```bash
-read -rsp 'Contraseña del dueño: ' p && printf '%s' "$p" | docker compose run --rm -T --no-deps \
+IFS= read -rsp 'Contraseña del dueño: ' p && printf '%s' "$p" | docker compose run --rm -T --no-deps \
   ads-api python -m safent_ads.tools.seed_owner --email tu@correo.com --password-stdin; unset p
 ```
 
@@ -118,12 +192,6 @@ existente: es una herramienta de acceso root local, no un alta con protección
 de reintento.
 
 Entra en el panel con ese correo y esa contraseña. Un despliegue, un dueño.
-
-`POST /mcp` sin credencial responde `401`: es la respuesta correcta, la puerta
-pide autorización. `/mcp` no se abre en el navegador; la interfaz para personas
-es el panel.
-
-Un solo comando sustituirá estos pasos.
 
 ## Conectar un agente
 
@@ -177,6 +245,8 @@ Una instalación recién hecha deniega el 100 % de las escrituras. Es a propósi
 | Variable | Para qué |
 |---|---|
 | `ADS_PUBLIC_BASE_URL` | Dominio público de esta instancia. Las cookies y el OAuth dependen de que coincida con el real. |
+| `ADS_SINGLE_OWNER_MODE` | Obligatoria (o su alternativa de abajo): sin ninguna de las dos, `ads-api` no arranca. `true` para este repo autoalojado; `make first-run` ya la escribe. |
+| `ADS_SEAT_AUTHORITY_ENABLED` | La otra vía: el alta de usuarios la resuelve una consola externa (Enterprise alojado) en vez de esta instancia. Excluyente con la de arriba. |
 | `ADS_INSTANCE_NAME` | Cómo se llama este servidor para quien lo autoriza. Defecto: `Ads MCP`. |
 | `ADS_BRAND_NAME` | El negocio del que se anuncia. Defecto: `tu negocio`. |
 | `ADS_TRUSTED_PROXY_HOPS` | `1` si tienes un proxy con TLS delante. `0` (defecto) solo sin proxy. |
@@ -192,6 +262,14 @@ Una instalación recién hecha deniega el 100 % de las escrituras. Es a propósi
 
 No secretos en `.env`: viven en `secrets/api.env` y `secrets/broker.env`, cada
 uno con su `env_file:`, y ningún servicio ve los del otro.
+
+`ADS_SINGLE_OWNER_MODE`, `ADS_TRUSTED_PROXY_HOPS` y
+`ADS_MCP_STATIC_TOKEN_ENABLED` de la tabla de arriba viven en
+`secrets/api.env` aunque no parezcan secretos: `compose.yaml` solo reenvía a
+`ads-api`/`ads-worker` cinco variables fijas desde `.env`
+(`ADS_PUBLIC_BASE_URL`, `ADS_DATABASE_URL`, `ADS_BROKER_SOCKET`, `ADS_TZ`,
+`ADS_ACTIVE_HOURS`). Cualquier otra puesta en `.env` llegaría inerte — nunca
+al proceso —, mientras que `secrets/api.env` entra entero por `env_file:`.
 
 ## Modos avanzados
 

@@ -156,6 +156,10 @@ def _client(app: object, *, cookies: dict[str, str] | None = None) -> httpx.Asyn
     [
         "/.well-known/oauth-authorization-server",
         "/.well-known/oauth-protected-resource/mcp",
+        # T049 (spec 008): la ruta PELADA de RFC 9728 SS3.1 -- varios
+        # clientes (Codex incluido) la prueban antes que la de `/mcp` -- sin
+        # ruta propia caia en este mismo catch-all de SPA con 200 HTML.
+        "/.well-known/oauth-protected-resource",
     ],
 )
 async def test_well_known_metadata_routes_win_over_the_spa_catch_all(
@@ -169,6 +173,68 @@ async def test_well_known_metadata_routes_win_over_the_spa_catch_all(
         assert response.status_code == 200
         assert response.headers["content-type"].startswith("application/json")
         assert response.text != "<html>panel</html>"
+    finally:
+        await app.state.container.aclose()
+
+
+async def test_unsupported_well_known_document_never_falls_through_to_the_panel_shell(
+    database_url: str, panel_dist_dir: Path
+) -> None:
+    """T049 (spec 008): este AS no publica `openid-configuration` (RFC 8414
+    SS3, protocolo distinto de lo que si implementamos) -- sin una ruta
+    propia bajo `/.well-known/*`, este catch-all de SPA lo serviria como
+    200 HTML en vez del 404 JSON que le corresponde."""
+    app = create_app(_api_settings(database_url, panel_dist_dir=panel_dist_dir))
+    try:
+        async with _client(app) as client:
+            response = await client.get("/.well-known/openid-configuration")
+
+        assert response.status_code == 404
+        assert response.headers["content-type"].startswith("application/json")
+        assert response.text != "<html>panel</html>"
+    finally:
+        await app.state.container.aclose()
+
+
+async def test_well_known_never_falls_through_to_a_real_spa_even_with_oauth_disabled(
+    database_url: str, panel_dist_dir: Path
+) -> None:
+    """Revision de seguridad (PR 44): `well_known_not_found_route()` se
+    registra SIEMPRE (`_register_mcp_oauth_surface`), no solo cuando
+    `ADS_MCP_OAUTH_ENABLED=true` -- con OAuth apagado Y el panel de verdad
+    montado (`panel_dist_dir` con un `index.html` real, a diferencia de
+    `tests/contracts/mcp_oauth/test_metadata_documents.py`, que lo evita a
+    proposito), `/.well-known/*` sigue sin caer en el catch-all de SPA."""
+    settings = _api_settings(database_url, panel_dist_dir=panel_dist_dir).model_copy(
+        update={"mcp_oauth_enabled": False}
+    )
+    app = create_app(settings)
+    try:
+        async with _client(app) as client:
+            response = await client.get("/.well-known/oauth-authorization-server")
+
+        assert response.status_code == 404
+        assert response.headers["content-type"].startswith("application/json")
+        assert response.text != "<html>panel</html>"
+    finally:
+        await app.state.container.aclose()
+
+
+async def test_well_known_with_an_unsupported_method_is_405_json_not_starlettes_plain_text(
+    database_url: str, panel_dist_dir: Path
+) -> None:
+    """Revision de seguridad (PR 44): Starlette responde 405 en texto plano
+    por defecto para una ruta cuyo metodo no casa -- `well_known_not_found_
+    route()` registra un `methods=` amplio a proposito para poder devolver
+    el MISMO sobre JSON que el resto de la API."""
+    app = create_app(_api_settings(database_url, panel_dist_dir=panel_dist_dir))
+    try:
+        async with _client(app) as client:
+            response = await client.post("/.well-known/oauth-authorization-server", json={})
+
+        assert response.status_code == 405
+        assert response.headers["content-type"].startswith("application/json")
+        assert response.json()["error"]["code"] == "METHOD_NOT_ALLOWED"
     finally:
         await app.state.container.aclose()
 

@@ -18,13 +18,13 @@ from safent_ads.mcp_oauth.domain.errors import (
     TooManyRedirectUrisError,
 )
 from safent_ads.mcp_oauth.domain.scope import ScopeSet
+from safent_ads.shared.net.loopback import LOOPBACK_HOSTS as _LOOPBACK_HOSTS
 
 _MAX_REDIRECT_URIS = 5
 # threat-model.md C-42 y 0035_mcp_oauth (`oauth_clients_client_name_check`):
 # el dominio no puede permitir un nombre que la BD despues rechaza con un
 # `IntegrityError` opaco -- el mismo tope, una sola vez.
 _MAX_CLIENT_NAME_LENGTH = 100
-_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 # D-11 (threat-model.md C-70 pieza 4, decision del dueno): el conjunto
 # CERRADO de esquemas admitidos. `https` solo sobrevive porque un bucle
 # local con TLS propio sigue siendo la misma maquina; un host remoto ya

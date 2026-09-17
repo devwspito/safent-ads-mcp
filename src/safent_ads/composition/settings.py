@@ -22,12 +22,16 @@ from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 from safent_ads.composition.managed_settings import ManagedAdsSettings
+from safent_ads.mcp_oauth.domain.errors import InvalidResourceError
+from safent_ads.mcp_oauth.domain.resource import ResourceIndicator
 from safent_ads.proposals.domain.google_channel_spec import GoogleAdvertisingChannelType
+from safent_ads.shared.net.loopback import is_loopback_http_origin
 
 _MIN_SESSION_SECRET_BYTES = 32
 _ACTIVE_HOURS_PATTERN = re.compile(r"^\d{2}:\d{2}-\d{2}:\d{2}$")
 _MAX_INSTANCE_NAME_LENGTH = 64
 _DEFAULT_INSTANCE_NAME = "Ads MCP"
+_DEFAULT_PORTS = {"https": 443, "http": 80}
 
 
 @dataclass(frozen=True, slots=True)
@@ -205,15 +209,97 @@ class CommonSettings(ManagedAdsSettings):
         parsed = urlsplit(normalized)
         if parsed.path or parsed.query or parsed.fragment:
             raise ValueError(f"ADS_PUBLIC_BASE_URL no admite path/query/fragment: {value!r}")
-        if not cls._is_allowed_public_base_url_origin(parsed):
-            raise ValueError(f"ADS_PUBLIC_BASE_URL debe ser https o http://localhost: {value!r}")
-        return normalized
+        if parsed.username is not None or parsed.password is not None:
+            # Sin eco del valor: aqui el valor lleva credenciales. Antes se
+            # descartaban en silencio al reconstruir el origen canonico.
+            raise ValueError("ADS_PUBLIC_BASE_URL no admite usuario ni contraseña en la URL")
+        cls._require_a_valid_port(parsed, original=value)
+        if not cls._is_allowed_public_base_url_origin(parsed, normalized=normalized):
+            raise ValueError(
+                f"ADS_PUBLIC_BASE_URL debe ser https o http de bucle local "
+                f"(localhost, 127.0.0.1 o [::1]): {value!r}"
+            )
+        canonical = cls._canonical_origin(parsed)
+        cls._require_a_valid_oauth_resource(canonical, original=value)
+        return canonical
 
     @staticmethod
-    def _is_allowed_public_base_url_origin(parsed: SplitResult) -> bool:
+    def _require_a_valid_port(parsed: SplitResult, *, original: str) -> None:
+        """Revision de seguridad (PR 44): un puerto fuera de 1-65535 (mismo
+        rango que `mcp_oauth/domain/client.py::RedirectUri`) se rechaza
+        aqui, con un mensaje que NOMBRA `ADS_PUBLIC_BASE_URL` -- antes
+        `:999999` colaba hasta `_canonical_origin`, que revienta
+        con un `ValueError` incidental de `urlsplit(...).port` (correcto,
+        pero opaco) al reconstruir el valor."""
+        try:
+            port = parsed.port
+        except ValueError as exc:
+            raise ValueError(f"ADS_PUBLIC_BASE_URL con puerto invalido: {original!r}") from exc
+        if port == 0:
+            raise ValueError(f"ADS_PUBLIC_BASE_URL con puerto invalido: {original!r}")
+
+    @staticmethod
+    def _canonical_origin(parsed: SplitResult) -> str:
+        """Revision de PR 44 (T049): `urlsplit` ya devuelve `scheme`/
+        `hostname` en minuscula (RFC 3986 SS3.1/SS3.2.2, no distinguen
+        mayusculas), asi que `http://LOCALHOST:8410` pasaba
+        `_is_allowed_public_base_url_origin` sin problema -- pero el valor
+        GUARDADO seguia siendo la cadena original con mayusculas.
+        `ResourceIndicator.canonical()` la concatena tal cual dentro de
+        `resource`, que Postgres compara con un `~` case-SENSITIVE
+        (0054_mcp_oauth_loopback_resource): el primer `/authorize` volvia
+        a reventar con el mismo `IntegrityError` opaco de T049, solo que
+        por mayusculas en vez de por bucle local. Reconstruye desde
+        `hostname`/`port` (ya normalizados) en vez de `netloc.lower()`:
+        el `userinfo` ya se rechazo antes de llegar aqui. `hostname` pierde los corchetes de un
+        literal IPv6
+        (`[::1]` -> `::1`) -- hay que devolverselos, o el resultado ni
+        siquiera separa host de puerto.
+
+        Revision de seguridad (PR 44, MINOR a): tambien quita el puerto
+        cuando es el por defecto del esquema (443 https / 80 http). El
+        SDK anuncia `issuer`/`resource` como `pydantic.AnyHttpUrl`
+        (`mcp_oauth/presentation/routes.py::issuer_url`,
+        `build_oauth_routes`), que SIEMPRE serializa sin un puerto por
+        defecto explicito (WHATWG URL, la libreria Rust de pydantic-core);
+        `ResourceIndicator.canonical()` en cambio concatena
+        `public_base_url` tal cual, sin pasar por `AnyHttpUrl`. Con
+        `ADS_PUBLIC_BASE_URL=https://host:443` sin esta normalizacion, los
+        metadatos anunciarian `resource=https://host/mcp` pero el
+        `resource` REALMENTE persistido seria `https://host:443/mcp` --
+        un cliente que pide exactamente lo que descubrio en los metadatos
+        chocaria SIEMPRE con `invalid_target` (`StartAuthorization.
+        execute()` compara cadena exacta)."""
+        host = parsed.hostname or ""
+        if ":" in host:
+            host = f"[{host}]"
+        port = None if parsed.port == _DEFAULT_PORTS.get(parsed.scheme) else parsed.port
+        port_suffix = f":{port}" if port is not None else ""
+        return f"{parsed.scheme}://{host}{port_suffix}"
+
+    @staticmethod
+    def _is_allowed_public_base_url_origin(parsed: SplitResult, *, normalized: str) -> bool:
         if parsed.scheme == "https":
             return True
-        return parsed.scheme == "http" and parsed.hostname == "localhost"
+        return is_loopback_http_origin(normalized)
+
+    @staticmethod
+    def _require_a_valid_oauth_resource(canonical_base_url: str, *, original: str) -> None:
+        """Revision de seguridad (PR 44): aserta EN EL ARRANQUE que
+        `ResourceIndicator.canonical()` -- el `resource` que TODO
+        `/authorize` intenta persistir -- pasa el mismo criterio que el
+        CHECK de Postgres (`0054_mcp_oauth_loopback_resource`, agreement
+        probado en `tests/integration/migrations/
+        test_0054_mcp_oauth_loopback_resource.py`). Si algun dia divergen,
+        esto revienta AQUI, con un mensaje que nombra `ADS_PUBLIC_BASE_URL`,
+        en vez de en el primer `/authorize` real contra un
+        `IntegrityError`/`invalid_request` opaco."""
+        try:
+            ResourceIndicator.canonical(canonical_base_url)
+        except InvalidResourceError as exc:
+            raise ValueError(
+                f"ADS_PUBLIC_BASE_URL produce un resource OAuth invalido: {original!r}"
+            ) from exc
 
     @field_validator("telegram_owner_chat_ids", mode="before")
     @classmethod

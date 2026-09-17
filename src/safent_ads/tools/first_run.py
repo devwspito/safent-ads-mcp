@@ -65,6 +65,7 @@ from urllib.parse import quote, unquote, urlsplit
 import asyncpg  # type: ignore[import-untyped]
 import httpx
 
+from safent_ads.shared.net.loopback import is_loopback_http_origin
 from safent_ads.tools.gen_keys import ApprovalKeyMaterialError, generate_key_pair, public_key_for
 from safent_ads.tools.seed_owner import to_asyncpg_dsn, upsert_owner_password
 
@@ -134,6 +135,17 @@ _STATIC_TOKEN_SWITCH = "ADS_MCP_STATIC_TOKEN_ENABLED"  # noqa: S105
 
 _PLACEHOLDER_MARK = "change-me"
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+# `repositorio[:tag][@sha256:digest]`, sin espacio ni salto de linea
+# posible: CWE-74 (revision de seguridad PR 45) -- `--image`/`ADS_IMAGE`
+# acababa tal cual en una linea `ADS_IMAGE=<valor>` de `.env`
+# (`_merge_env_text`); un valor con un `\n` incrustado
+# (`--image=$'ref\nADS_DATABASE_URL=...'`) inyectaba una clave nueva que
+# gana en cada `make up` siguiente. Ancla de principio a fin: nada de lo
+# que no este en el juego de caracteres de una referencia de imagen real
+# pasa, ni siquiera el caracter final.
+_IMAGE_REF_RE = re.compile(
+    r"^[A-Za-z0-9][A-Za-z0-9._/-]*(:[A-Za-z0-9._-]+)?(@sha256:[a-f0-9]{64})?$"
+)
 
 # Las TRES preguntas del contrato, en este orden y ninguna mas (SC-005).
 _URL_QUESTION = "URL pública de esta instancia (https://…): "
@@ -226,14 +238,22 @@ class Answers:
     public_base_url: str
     owner_email: str
     composio_api_key: str | None
+    image: str | None
 
 
 def _validate_public_base_url(raw: str) -> str:
+    """Mismo conjunto cerrado de bucle local que `composition/settings.py::
+    ApiSettings._is_allowed_public_base_url_origin` (T049 spec 008,
+    revision de PR 44: `shared/net/loopback.py` es ahora la UNICA fuente,
+    para que este asistente y `ApiSettings` no puedan volver a divergir)."""
     url = raw.strip().rstrip("/")
     parts = urlsplit(url)
-    loopback = parts.scheme == "http" and parts.hostname in {"127.0.0.1", "localhost"}
+    loopback = is_loopback_http_origin(url)
     if not parts.netloc or (parts.scheme != "https" and not loopback):
-        raise ValueError(f"URL inválida: {url!r}; se esperaba https://… (o http://127.0.0.1)")
+        raise ValueError(
+            f"URL inválida: {url!r}; se esperaba https://… "
+            "(o http://127.0.0.1, http://localhost, http://[::1])"
+        )
     return url
 
 
@@ -261,10 +281,26 @@ def _ask(
     raise UsageError(f"falta {flag}: sin respuesta válida")
 
 
+def _strip_one_trailing_line_ending(raw: str) -> str:
+    """`.strip()` recorta CUALQUIER espacio de los dos extremos -- un
+    secreto con un espacio inicial/final a propósito (una contraseña
+    tecleada con uno, por ejemplo) queda mutilado en silencio: se guarda
+    sin él, pero el dueño sigue escribiendo el suyo con él, y el alta
+    nunca vuelve a coincidir (revisión de seguridad PR 45). Lo único que
+    hay que quitar es el salto de línea que añade la propia tubería
+    (`echo "$p" | ...` en vez de `printf '%s' "$p" | ...`), como mucho
+    uno, nunca los espacios de verdad."""
+    if raw.endswith("\r\n"):
+        return raw[:-2]
+    if raw.endswith("\n") or raw.endswith("\r"):
+        return raw[:-1]
+    return raw
+
+
 def _read_stdin_secret(flag: str) -> str:
     if sys.stdin.isatty():
         raise UsageError(f"{flag} exige que el valor llegue por stdin, no tecleado en un terminal")
-    value = sys.stdin.read().strip()
+    value = _strip_one_trailing_line_ending(sys.stdin.read())
     if not value:
         raise UsageError(f"{flag}: stdin no traía ningún valor")
     return value
@@ -291,7 +327,42 @@ def _resolve_answers(
         public_base_url=url,
         owner_email=email,
         composio_api_key=_resolve_composio(args, existing, prompter),
+        image=_resolve_image(args, existing),
     )
+
+
+def _validate_image_ref(raw: str) -> str:
+    """CWE-74 (revision de seguridad PR 45): rechaza CUALQUIER cosa que no
+    sea una referencia de imagen real -- un espacio, un `\\n`, un `;` --
+    antes de que llegue a ninguna parte que escriba un fichero. Nunca por
+    tag sin digest (README "Verificar la imagen publicada"): se deja
+    seguir -- no es un fallo, es una eleccion de quien lo puso -- pero se
+    avisa una vez."""
+    value = raw.strip()
+    if not _IMAGE_REF_RE.match(value):
+        raise UsageError(
+            f"--image: referencia de imagen invalida: {value!r}; se esperaba algo como "
+            "ghcr.io/<owner>/<repo>@sha256:<64 caracteres hexadecimales>"
+        )
+    if "@sha256:" not in value:
+        print(
+            f"· --image sin digest ({value}): verifica por @sha256:... antes de confiar en "
+            'ella (README "Verificar la imagen publicada")',
+            file=sys.stderr,
+        )
+    return value
+
+
+def _resolve_image(args: argparse.Namespace, existing: WorkspaceEnv) -> str | None:
+    """No es una de las tres preguntas del contrato: nunca se pregunta, solo
+    se recuerda. `--image` > `ADS_IMAGE` ya exportada (la pone
+    `scripts/primer-arranque.sh` antes de invocar esto) > lo que ya haya en
+    `.env` de una pasada anterior. `None` deja la clave fuera de `.env` --
+    sin ella, `compose.yaml` sigue con su propio valor por omisión
+    (`safent-ads:local`), que es justo lo que quiere quien nunca tocó este
+    flag."""
+    raw = args.image or os.environ.get("ADS_IMAGE") or existing.kept(".env", "ADS_IMAGE")
+    return _validate_image_ref(raw) if raw else None
 
 
 def _resolve_composio(
@@ -427,6 +498,18 @@ class FileOutcome:
     filled_keys: tuple[str, ...] | None
 
 
+def _reject_newline_in_value(key: str, value: str) -> None:
+    """Ultima linea de defensa (CWE-74, revision de seguridad PR 45): una
+    linea `CLAVE=valor` es la unidad atomica de `.env`/`secrets/*.env` --
+    un valor con `\\n`/`\\r` incrustado inyectaria una clave nueva que el
+    llamante nunca escribio. Protege a CUALQUIER llamador, tambien uno
+    futuro que no valide por su cuenta (`_validate_image_ref` ya cierra
+    `--image`/`ADS_IMAGE` mas arriba, pero esto es lo que de verdad decide
+    que acaba en el fichero)."""
+    if "\n" in value or "\r" in value:
+        raise UsageError(f"{key}: el valor no puede contener un salto de línea")
+
+
 def _merge_env_text(current: str, values: Mapping[str, str]) -> tuple[str, tuple[str, ...]]:
     lines = current.splitlines()
     index_of = {
@@ -436,6 +519,7 @@ def _merge_env_text(current: str, values: Mapping[str, str]) -> tuple[str, tuple
     }
     filled: list[str] = []
     for key, value in values.items():
+        _reject_newline_in_value(key, value)
         position = index_of.get(key)
         if position is not None and not _is_placeholder(lines[position].split("=", 1)[1]):
             continue
@@ -450,6 +534,7 @@ def _merge_env_text(current: str, values: Mapping[str, str]) -> tuple[str, tuple
 def _upsert_env_text(current: str, key: str, value: str) -> str:
     """Fija una clave aunque ya tenga valor -- al contrario que
     `_merge_env_text`, que solo rellena lo ausente."""
+    _reject_newline_in_value(key, value)
     lines = current.splitlines()
     for position, line in enumerate(lines):
         match = _ENV_LINE_RE.match(line.strip())
@@ -582,7 +667,7 @@ def _dotenv_values(existing: WorkspaceEnv, answers: Answers) -> dict[str, str]:
     user = existing.kept(".env", "POSTGRES_USER") or _DEFAULT_DB_USER
     database = existing.kept(".env", "POSTGRES_DB") or _DEFAULT_DB_NAME
     password = existing.kept(".env", "POSTGRES_PASSWORD") or _random_url_safe()
-    return {
+    values = {
         "POSTGRES_USER": user,
         "POSTGRES_PASSWORD": password,
         "POSTGRES_DB": database,
@@ -595,6 +680,9 @@ def _dotenv_values(existing: WorkspaceEnv, answers: Answers) -> dict[str, str]:
         "ADS_ACTIVE_HOURS": _DEFAULT_ACTIVE_HOURS,
         "ADS_BROKER_SOCKET": _BROKER_SOCKET,
     }
+    if answers.image is not None:
+        values["ADS_IMAGE"] = answers.image
+    return values
 
 
 def _static_token_path_is_open(existing: WorkspaceEnv) -> bool:
@@ -1097,6 +1185,7 @@ def _parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--workspace", type=Path, default=Path("."))
     parser.add_argument("--public-base-url")
     parser.add_argument("--owner-email")
+    parser.add_argument("--image")
     parser.add_argument("--composio-api-key-stdin", action="store_true")
     parser.add_argument("--no-composio", action="store_true")
     parser.add_argument("--password-stdin", action="store_true")

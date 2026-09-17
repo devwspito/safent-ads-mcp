@@ -27,25 +27,41 @@ first-run:
 	./scripts/primer-arranque.sh $(ARGS)
 
 # T066, threat-model.md C-24: antes de `make up`, comprueba que los
-# secretos reales existen, tienen permisos 0600 y no quedan placeholders
-# `change-me` sin rellenar. `config/caps.yaml` no es un secreto pero recibe
-# el mismo trato de "nada por defecto": debe existir y no ser escribible
-# por grupo/otros. No hace `chown` por si mismo -- requeriria privilegios
-# que este target no debe asumir; solo avisa si el propietario no es root.
+# secretos reales existen, tienen permisos 0600 y no quedan marcadores de
+# plantilla sin rellenar. `.env` entra en la misma lista (revisión de
+# seguridad PR 45): lleva `POSTGRES_PASSWORD` y el DSN con esa contraseña
+# dentro (ver el `_DOTENV_HEADER` de `safent_ads.tools.first_run`), y el
+# camino manual (`cp .env.example .env`) lo dejaba en el 0644 por omisión
+# del sistema de ficheros con un `change-me` sin tocar. `config/caps.yaml`
+# no es un secreto pero recibe el mismo trato de "nada por defecto": debe
+# existir y no ser escribible por grupo/otros. No hace `chown` por si
+# mismo -- requeriria privilegios que este target no debe asumir; solo
+# avisa si el propietario no es root.
+#
+# El marcador se busca SOLO en lineas `CLAVE=valor` sin comentar, nunca en
+# comentarios: la cabecera de `secrets/*.env.example` nombra el propio
+# marcador para explicar que hace este target (T049, walkthrough en
+# limpio), y esa cabecera viaja tal cual a `secrets/*.env` al copiarla --
+# con un grep sin filtrar, ese fichero NUNCA pasaba, ni con todo relleno.
+#
+# `stat -c` es de GNU coreutils -- en BSD/macOS no existe esa opcion y
+# sale con error, que el `|| stat -f ...` de abajo recoge (revision de
+# seguridad PR 45): `%a`/`%Lp` son permisos en octal, `%U`/`%Su` el
+# propietario, en cada dialecto.
 check-secrets:
 	@status=0; \
-	for f in secrets/broker.env secrets/api.env; do \
+	for f in secrets/broker.env secrets/api.env .env; do \
 		if [ ! -f "$$f" ]; then \
 			echo "FALTA $$f (copiar desde $$f.example y rellenar)" >&2; \
 			status=1; \
 			continue; \
 		fi; \
-		perm="$$(stat -c '%a' "$$f")"; \
+		perm="$$(stat -c '%a' "$$f" 2>/dev/null || stat -f '%Lp' "$$f")"; \
 		if [ "$$perm" != "600" ]; then \
 			echo "$$f tiene permisos $$perm, deben ser 600 -> chmod 600 $$f" >&2; \
 			status=1; \
 		fi; \
-		if grep -q 'change-me' "$$f"; then \
+		if grep -v '^[[:space:]]*#' "$$f" | grep -q 'change-me'; then \
 			echo "$$f todavia tiene placeholders 'change-me' sin rellenar" >&2; \
 			status=1; \
 		fi; \
@@ -58,7 +74,7 @@ check-secrets:
 			echo "config/caps.yaml es escribible por grupo/otros -> chmod 644 config/caps.yaml" >&2; \
 			status=1; \
 		fi; \
-		owner="$$(stat -c '%U' config/caps.yaml)"; \
+		owner="$$(stat -c '%U' config/caps.yaml 2>/dev/null || stat -f '%Su' config/caps.yaml)"; \
 		if [ "$$owner" != "root" ]; then \
 			echo "AVISO: config/caps.yaml pertenece a $$owner, no root (chown root:root config/caps.yaml en despliegue real)" >&2; \
 		fi; \
@@ -70,10 +86,32 @@ check-secrets:
 	if [ "$$status" -eq 0 ]; then echo "check-secrets: OK"; fi; \
 	exit $$status
 
+# Con `ADS_IMAGE` puesta (entorno o `.env`, la escribe `make first-run`):
+# SIEMPRE se descarga, nunca se compila encima. Sin este paso, `docker
+# compose up` con `build:` presente y la imagen ausente en local intenta
+# tirar y, si falla (por ejemplo la referencia no existe todavia en el
+# registro), CONSTRUYE de fuente en silencio y etiqueta ese build local
+# con el nombre de la referencia firmada -- sustituye la imagen verificada
+# por una que no lo es, sin avisar (revision de PR 45, T049). `--no-build`
+# en el `up` final hace que, si el pull de arriba no dejo la imagen en
+# local por lo que sea, esto falle alto y claro en vez de compilar.
 up:
-	docker compose up -d ads-db
-	docker compose run --rm ads-migrate
-	docker compose up -d ads-broker ads-api ads-worker
+	@ads_image="$${ADS_IMAGE:-}"; \
+	if [ -z "$$ads_image" ] && [ -f .env ]; then \
+		ads_image="$$(sed -n 's/^ADS_IMAGE=//p' .env | tail -1)"; \
+	fi; \
+	if [ -n "$$ads_image" ]; then \
+		echo "→ Imagen publicada ($$ads_image): descargando (nunca se compila encima)…"; \
+		docker compose pull ads-migrate ads-api ads-worker ads-broker \
+			|| { echo "ERROR: no se pudo descargar $$ads_image; verifica ADS_IMAGE" >&2; exit 1; }; \
+		docker compose up -d ads-db; \
+		docker compose run --rm ads-migrate; \
+		docker compose up -d --no-build ads-broker ads-api ads-worker; \
+	else \
+		docker compose up -d ads-db; \
+		docker compose run --rm ads-migrate; \
+		docker compose up -d ads-broker ads-api ads-worker; \
+	fi
 
 down:
 	docker compose down

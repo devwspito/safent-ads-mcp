@@ -41,6 +41,7 @@ from safent_ads.broker.application.ports import (
 from safent_ads.broker.platforms.oauth_http import OAuthHttpClient, OAuthHttpError
 from safent_ads.shared.clock import Clock
 from safent_ads.shared.ids import PlatformCode
+from safent_ads.shared.net.loopback import is_loopback_http_origin
 
 _BASE = "https://backend.composio.dev/api/v3.1"
 _TOOLKITS = {PlatformCode.GOOGLE: "googleads", PlatformCode.META: "metaads"}
@@ -146,11 +147,7 @@ class ManagedOAuthConnectService:
             or parsed.password
             or parsed.query
             or parsed.fragment
-            or not (
-                parsed.scheme == "https"
-                or parsed.scheme == "http"
-                and parsed.hostname in {"127.0.0.1", "localhost", "::1"}
-            )
+            or not (parsed.scheme == "https" or is_loopback_http_origin(redirect_uri))
         ):
             raise OAuthProviderDeniedError("managed_callback_invalid")
         state, connection_id = generate_state(), str(uuid.uuid4())

@@ -202,7 +202,7 @@ from safent_ads.mcp_oauth.infrastructure.sql_oauth_session import SqlOAuthSessio
 from safent_ads.mcp_oauth.presentation.caller_scope import OAuthCallerScopeResolver
 from safent_ads.mcp_oauth.presentation.consent_router import build_consent_router
 from safent_ads.mcp_oauth.presentation.grants_router import build_grants_router
-from safent_ads.mcp_oauth.presentation.routes import build_oauth_routes
+from safent_ads.mcp_oauth.presentation.routes import build_oauth_routes, well_known_not_found_route
 from safent_ads.mcp_oauth.presentation.routes import issuer_url as oauth_issuer_url
 from safent_ads.mcp_oauth.presentation.sdk_provider import SdkOAuthProvider
 from safent_ads.mcp_oauth.presentation.token_verifier import CompositeTokenVerifier
@@ -1136,7 +1136,12 @@ def _register_mcp_oauth_surface(
     el de "Agentes conectados" se montan SIEMPRE: son mutaciones del panel
     (sesion + CSRF + TOTP), nunca superficie del AS, y no hacen nada nuevo
     si nunca se crea una `AuthorizationRequest`/`Grant` porque
-    `/authorize` esta apagado."""
+    `/authorize` esta apagado.
+
+    Revision de seguridad (PR 44): `well_known_not_found_route()` se anade
+    SIEMPRE, tambien con OAuth apagado -- `/.well-known/*` nunca debe caer
+    en el catch-all de SPA (`_mount_panel_spa`) y responder 200 con el
+    HTML del panel, este activado el AS o no."""
     if wiring.oauth_provider is not None:
         _route_oauth_endpoints(
             app,
@@ -1144,6 +1149,7 @@ def _register_mcp_oauth_surface(
             public_base_url=settings.public_base_url,
             resource_name=settings.instance_name,
         )
+    app.router.routes.append(well_known_not_found_route())
     app.include_router(
         build_consent_router(
             token_hasher=wiring.token_hasher,

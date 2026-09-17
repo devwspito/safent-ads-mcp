@@ -9,6 +9,19 @@
 
 name: safent-ads
 
+# `ADS_IMAGE` selecciona QUE imagen corren ads-migrate/ads-api/ads-worker/
+# ads-broker (T049 walkthrough en limpio, spec 008): por omision el tag
+# local que `make build`/`docker compose build` produce, pero cualquiera
+# puede fijarlo a la imagen publicada verificada por digest (README
+# "Verificar la imagen publicada") -- `ADS_IMAGE=ghcr.io/<owner>/<repo>@sha256:...`,
+# a mano o via `make first-run --image ...` (lo escribe en `.env`). `build:`
+# se queda en los cuatro servicios para quien prefiere compilar de fuente;
+# `scripts/primer-arranque.sh` decide el (no re)construir/tirar sin dejarselo
+# al `pull_policy` de compose, que con `build:` presente compilaria en vez de
+# tirar si la referencia no esta en local -- justo lo contrario de "usa la
+# imagen firmada, no una reconstruida".
+x-ads-image: &ads-image "${ADS_IMAGE:-safent-ads:local}"
+
 # Solo configuracion NO secreta, compartida por ads-api y ads-worker
 # (CommonSettings en composition/settings.py). Nunca POSTGRES_* (solo
 # ads-db la necesita) ni credenciales de plataforma (solo ads-broker).
@@ -37,8 +50,24 @@ networks:
   # egreso en la aplicacion, egress_guard.py). "Interna" aqui significa
   # "sin puerto publicado salvo ads-api:8410 en loopback", no "sin
   # internet"; `internal: true` cortaria ambas integraciones.
+  #
+  # Sin `name:` fijo a proposito (T049, spec 008): con uno fijo, una
+  # segunda instancia en el mismo host colisiona incluso con `-p` distinto
+  # -- dos negocios, dos maquinas de pruebas, o simplemente correr `make
+  # up` dos veces con nombres de proyecto distintos. Sin `name:`, compose
+  # la deriva del proyecto (`name: safent-ads` de arriba, o
+  # `-p`/`COMPOSE_PROJECT_NAME`): `<proyecto>_ads-net`. Un despliegue
+  # interno que otra pila externa deba referenciar por nombre fijo
+  # (`external: true`) es responsabilidad de SU PROPIO fichero compose,
+  # nunca de este.
+  #
+  # Aviso de actualizacion: si ya tenias una pila levantada con este
+  # compose.yaml ANTES de este cambio, la red vieja se llamaba
+  # `safent-ads-net`; con el nombre derivado, `docker compose up` crea una
+  # red nueva bajo el nombre de proyecto en vez de reutilizar la vieja
+  # (que queda huerfana -- `docker network rm safent-ads-net` cuando ya no
+  # la use nada).
   ads-net:
-    name: safent-ads-net
 
 services:
   ads-db:
@@ -76,7 +105,8 @@ services:
   # T214: sin este paso la BD nueva no tenia alembic_version y el worker
   # fallaba cada ciclo). Una replica, sin carrera.
   ads-migrate:
-    image: safent-ads:local
+    image: *ads-image
+    pull_policy: missing
     user: "10001:10001"
     command: alembic upgrade head
     environment: *ads-app-env
@@ -95,7 +125,8 @@ services:
     build:
       context: .
       dockerfile: Containerfile
-    image: safent-ads:local
+    image: *ads-image
+    pull_policy: missing
     restart: unless-stopped
     user: "10001:10001"
     # ads-broker-clients (gid 10003, Containerfile): sin esto `user: uid:gid`
@@ -152,7 +183,8 @@ services:
     build:
       context: .
       dockerfile: Containerfile
-    image: safent-ads:local
+    image: *ads-image
+    pull_policy: missing
     restart: unless-stopped
     user: "10001:10001"
     group_add:
@@ -215,7 +247,8 @@ services:
     build:
       context: .
       dockerfile: Containerfile
-    image: safent-ads:local
+    image: *ads-image
+    pull_policy: missing
     restart: unless-stopped
     user: "10002:10002"
     # Necesario para poder chgrp el socket a ads-broker-clients al arrancar
@@ -306,10 +339,13 @@ services:
     ports:
       - "127.0.0.1:8188:8188"
 
+# Sin `name:` fijo, mismo motivo que la red de arriba: derivados del
+# proyecto (`<proyecto>_ads-db-data`, etc.) para que una segunda instancia
+# en el mismo host (otro `-p`) no colisione con esta. Aviso de
+# actualizacion: una pila ya levantada con nombres fijos (`safent-ads-db-data`,
+# `safent-ads-broker-sock`, `safent-ads-credential-store`) no los reutiliza
+# sola -- revisa `docker volume ls` antes de tirar los viejos.
 volumes:
   ads-db-data:
-    name: safent-ads-db-data
   broker-sock:
-    name: safent-ads-broker-sock
   credential-store:
-    name: safent-ads-credential-store

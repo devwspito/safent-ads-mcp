@@ -19,6 +19,14 @@ class TooManyRedirectUrisError(DomainError):
     """Un `OAuthClient` no admite mas de 5 `redirect_uri` registradas."""
 
 
+class InvalidResourceError(DomainError):
+    """`resource` (RFC 8707) fuera del mismo conjunto cerrado que
+    `oauth_authorization_requests_resource_check`/`oauth_grants_resource_
+    check` (0054_mcp_oauth_loopback_resource): no es `https` con autoridad,
+    ni `http` de bucle local (127.0.0.1/[::1]/localhost) con un puerto
+    1-65535, o trae query/fragmento."""
+
+
 class InvalidClientNameError(DomainError):
     """`client_name` vacio, mas largo que el CHECK de `oauth_clients`, o
     con caracteres que mienten sobre lo que se lee en la pantalla de

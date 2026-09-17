@@ -84,10 +84,18 @@ class AuthorizationRequest:
 
     @staticmethod
     def _validate_code_challenge(value: str) -> None:
+        # El valor NO entra en el mensaje (mismo motivo que
+        # `mcp_oauth/domain/client.py::RedirectUri._reject_control_
+        # characters`): `SdkOAuthProvider._start()` reenvia este mensaje
+        # tal cual como `AuthorizeError.error_description`, que el SDK
+        # (`sdk:handlers/authorize.py::error_response()`) puede reflejar en
+        # la redireccion 302 de vuelta al cliente -- de ahi puede acabar en
+        # un log de borde que capture el `Location` (revision de
+        # seguridad, PR 44 MINOR c).
         if not _CODE_CHALLENGE_PATTERN.match(value):
             raise InvalidCodeChallengeError(
-                f"code_challenge debe ser base64url de exactamente 43 caracteres "
-                f"(SHA-256 S256, RFC 7636): {value!r}"
+                "code_challenge debe ser base64url de exactamente 43 caracteres "
+                "(SHA-256 S256, RFC 7636)"
             )
 
     def is_expired(self, now: datetime) -> bool:
