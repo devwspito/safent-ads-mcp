@@ -1,0 +1,8 @@
+-- T162 (broker/platforms/google_ads_adapter.py: GoogleAdsAdapter._campaign_budget_resource_name).
+-- Resuelve el presupuesto propio de una campana antes de mutarlo
+-- (_mutate_budget). Sin WHERE: el llamador anade
+-- "WHERE campaign.resource_name = '<resource_name ya saneado>'" -- ese
+-- resource_name ya paso por _validate_resource_name antes de llegar aqui,
+-- nunca un valor crudo externo.
+SELECT campaign_budget.resource_name
+  FROM campaign

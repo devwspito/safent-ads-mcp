@@ -1,0 +1,29 @@
+[
+  {
+    "kind": "approve_increase",
+    "mode": "inline_approval",
+    "friction": "confirm",
+    "requires_evidence": true,
+    "proposal_id": "proposal-1",
+    "diff_hash": "hash-1",
+    "applied_change": null,
+    "blocked_reason": null,
+    "reason": null,
+    "target": {
+      "method": "POST",
+      "path": "/api/v1/proposals/proposal-1/approve"
+    }
+  },
+  {
+    "kind": "none",
+    "mode": "blocked",
+    "friction": "none",
+    "requires_evidence": false,
+    "proposal_id": null,
+    "diff_hash": null,
+    "applied_change": null,
+    "blocked_reason": "not_controllable",
+    "reason": "Entidad no controlable: presupuesto compartido o sin palanca.",
+    "target": null
+  }
+]

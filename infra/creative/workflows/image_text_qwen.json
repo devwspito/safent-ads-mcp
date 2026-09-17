@@ -1,0 +1,95 @@
+{
+  "1": {
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model (Qwen-Image-2512-Lightning, 4-step, merged, ComfyUI-scaled-fp8)",
+      "note": "FIXED 2026-09-09: previously loaded the base checkpoint (qwen_image_2512_fp8_e4m3fn_scaled.safetensors, lightx2v's plain 'scaled' fp8 export) plus a separate LoraLoaderModelOnly node for the Lightning LoRA. That plain '_scaled' file stores its fp8 dequantization factors as per-block '*.weight_scale' tensors in a layout ComfyUI's UNETLoader does not recognize for this architecture — confirmed against this container's own logs: 'unet unexpected: [...hundreds of .weight_scale keys...]', all silently dropped. Without those scales the fp8 weights are used uncalibrated and the model produces pure noise regardless of sampler/cfg/shift — reproduced and root-caused on real hardware, not theoretical. lightx2v also ships qwen_image_2512_fp8_e4m3fn_scaled_comfyui_4steps_v1.0.safetensors — same weights with the base + this exact 4-step Lightning LoRA already merged, in the format their own '_comfyui_' name promises (and that ComfyUI's loader consumes with zero 'unexpected keys' warnings, verified). LoraLoaderModelOnly is gone — the LoRA is baked in."
+    },
+    "inputs": {
+      "unet_name": "qwen_image_2512_fp8_e4m3fn_scaled_comfyui_4steps_v1.0.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "3": {
+    "class_type": "CLIPLoader",
+    "_meta": { "title": "Load CLIP" },
+    "inputs": {
+      "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "type": "qwen_image",
+      "device": "default"
+    }
+  },
+  "4": {
+    "class_type": "VAELoader",
+    "_meta": { "title": "Load VAE" },
+    "inputs": { "vae_name": "qwen_image_vae.safetensors" }
+  },
+  "5": {
+    "class_type": "ModelSamplingAuraFlow",
+    "_meta": {
+      "title": "ModelSamplingAuraFlow",
+      "note": "shift=3 (was 3.1) to match ModelTC/LightX2V-Qwen-Image-Lightning's own official workflow (workflows/qwen-image-4steps.json) exactly — that file is the authoritative source for every KSampler/shift value here."
+    },
+    "inputs": {
+      "model": ["1", 0],
+      "shift": 3
+    }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "CLIP Text Encode (Positive Prompt)" },
+    "inputs": {
+      "text": "{{prompt}}",
+      "clip": ["3", 0]
+    }
+  },
+  "7": {
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "CLIP Text Encode (Negative Prompt)" },
+    "inputs": {
+      "text": " ",
+      "clip": ["3", 0]
+    }
+  },
+  "8": {
+    "class_type": "EmptySD3LatentImage",
+    "_meta": { "title": "Empty Latent Image" },
+    "inputs": {
+      "width": "{{width}}",
+      "height": "{{height}}",
+      "batch_size": 1
+    }
+  },
+  "9": {
+    "class_type": "KSampler",
+    "_meta": { "title": "KSampler (Lightning 4-step)" },
+    "inputs": {
+      "seed": "{{seed}}",
+      "steps": 4,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": ["5", 0],
+      "positive": ["6", 0],
+      "negative": ["7", 0],
+      "latent_image": ["8", 0]
+    }
+  },
+  "10": {
+    "class_type": "VAEDecode",
+    "_meta": { "title": "VAE Decode" },
+    "inputs": {
+      "samples": ["9", 0],
+      "vae": ["4", 0]
+    }
+  },
+  "11": {
+    "class_type": "SaveImage",
+    "_meta": { "title": "Save Image" },
+    "inputs": {
+      "filename_prefix": "ads-creative-qwen",
+      "images": ["10", 0]
+    }
+  }
+}

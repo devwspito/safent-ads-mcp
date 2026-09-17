@@ -1,0 +1,179 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Default-deny: sin esto el token hereda el permiso por defecto de la
+# cuenta/organizacion, que puede ser de escritura. Ninguno de los cinco
+# jobs necesita mas que leer el repo -- ninguno publica nada -- asi que
+# cada uno lo repite explicito en vez de fiarse solo del nivel de workflow.
+permissions:
+  contents: read
+
+# Los tests de integracion (tests/integration/test_decision_log_chain.py)
+# levantan su propio Postgres 16 via testcontainers hablando directamente
+# con el socket Docker del runner ubuntu-latest (ya lo trae de serie). Por
+# eso no hay un `services: postgres:` en este workflow -- seria un segundo
+# Postgres que el test nunca usa (testcontainers gestiona el suyo propio,
+# no lee variables de un servicio externo).
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.10.11"
+          python-version: "3.12"
+
+      - name: Sync dependencies
+        run: uv sync --dev --frozen
+
+      # Mismos targets que en local (Makefile): una sola fuente de verdad
+      # para "como se corre lint/type/test", nunca duplicada aqui.
+      - name: Lint + type check + unit tests
+        run: make lint type test
+
+      - name: Integration tests (Postgres via testcontainers)
+        run: make test-integration
+
+  panel:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Mismo tag que `panel-builder` en el Containerfile (T053): build
+      # local y CI compilan el SPA con el mismo Node.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: panel/package-lock.json
+
+      - name: npm ci (panel, sin scripts de postinstall)
+        working-directory: panel
+        run: npm ci --ignore-scripts
+
+      - name: Lint (panel)
+        working-directory: panel
+        run: npm run lint
+
+      - name: Typecheck (panel)
+        working-directory: panel
+        run: npm run typecheck
+
+      - name: Unit tests (panel)
+        working-directory: panel
+        run: npm run test
+
+      # `npm run build` = tsc --noEmit && vite build (panel/package.json):
+      # mismo comando que ejecuta la etapa `panel-builder` del Containerfile.
+      - name: Build (panel)
+        working-directory: panel
+        run: npm run build
+
+  build:
+    runs-on: ubuntu-latest
+    # `panel` primero (mas barato que el build de imagen completo): si el
+    # SPA no compila, el job `build` de abajo fallaria igual dentro del
+    # Containerfile, pero mas tarde y con menos senal de por que.
+    needs: [test, panel]
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # Solo construye la imagen (multi-stage, sin secretos en capas -- ver
+      # Containerfile) para detectar roturas de build en cada PR. Nunca
+      # publica: sin `docker push`, sin credenciales de registro en este
+      # job (plan.md/CLAUDE.md: "no publishing from a developer machine",
+      # y tampoco desde CI hasta que exista un job de release aparte).
+      - name: Build image (no push)
+        run: make build
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    # 008-mcp-ads-estandar T041: bloqueante desde 16-sep. Un repositorio que
+    # se publicara publicamente no puede permitirse un hallazgo tolerado
+    # -- `continue-on-error` era aceptable solo mientras se afinaba
+    # `.gitleaks.toml`, y esa racha sin falsos positivos ya paso.
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks (pinned + verificado)
+        run: |
+          set -euo pipefail
+          version=8.21.2
+          # El fichero se guarda con su nombre original: checksums.txt lo
+          # referencia por ese nombre y `sha256sum -c` no lo encontraba.
+          asset="gitleaks_${version}_linux_x64.tar.gz"
+          curl -fsSL -o "$asset" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${asset}"
+          curl -fsSL -o checksums.txt \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${version}/gitleaks_${version}_checksums.txt"
+          grep " ${asset}$" checksums.txt | sha256sum -c -
+          tar xzf "$asset" gitleaks
+          chmod +x gitleaks
+
+      - name: gitleaks detect
+        run: ./gitleaks detect --source . --config .gitleaks.toml -v
+
+  security-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@bec219d24cd3e171d82865faccec33120bb574f4 # v10.1.0
+        with:
+          version: "0.10.11"
+          python-version: "3.12"
+
+      - name: Sync dependencies
+        run: uv sync --dev --frozen
+
+      # Audita el entorno del propio proyecto (dependencias congeladas en
+      # uv.lock), no un requirements.txt aparte que pueda desincronizarse.
+      # --skip-editable: `safent-ads` (el propio paquete, instalado en
+      # modo editable por `uv sync`) no esta en PyPI y no es una
+      # "dependencia" que auditar -- sin este flag pip-audit lo trata como
+      # fallo de resolucion. Vulnerabilidades reales en terceros siguen
+      # devolviendo un exit code distinto de cero sin necesidad de
+      # `--strict` (ese flag es solo sobre fallos de resolucion).
+      - name: pip-audit (backend deps)
+        run: uv run --frozen --with pip-audit pip-audit --skip-editable
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: panel/package-lock.json
+
+      # --ignore-scripts (tasks.md T016): sin ejecutar postinstall de
+      # paquetes de terceros en el runner de CI.
+      - name: npm ci (panel, sin scripts de postinstall)
+        working-directory: panel
+        run: npm ci --ignore-scripts
+
+      # --omit=dev: las vulnerabilidades de devDependencies (linters,
+      # bundlers) no bloquean el envio de la SPA que de verdad se sirve;
+      # --audit-level=high para no ahogar la pipeline con advisories
+      # low/moderate de transitivas sin ruta de explotacion en un build
+      # estatico -- revisar igualmente el reporte completo cada release.
+      - name: npm audit (panel, deps de produccion)
+        working-directory: panel
+        run: npm audit --omit=dev --audit-level=high

@@ -1,0 +1,46 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  font-size: var(--fs-xs);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+}
+
+.verified {
+  color: var(--sig-subir-text);
+  border-color: var(--sig-subir-line);
+  background: var(--sig-subir-fill);
+}
+.verified .dot {
+  background: var(--sig-subir-line);
+}
+
+.pending {
+  color: var(--st-aprendizaje-text);
+  border-color: var(--st-aprendizaje-line);
+  background: transparent;
+}
+.pending .dot {
+  background: var(--st-aprendizaje-line);
+}
+
+.broken {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+  color: var(--st-freno-text);
+  border-color: var(--st-freno-line);
+  background: var(--st-freno-fill);
+  border-radius: 0;
+  border-width: 0 0 1px;
+}

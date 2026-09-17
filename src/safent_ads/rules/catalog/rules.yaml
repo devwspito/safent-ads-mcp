@@ -1,0 +1,672 @@
+# Catalogo de reglas semiautonomas (rule-catalog-and-signals.md).
+# M01-M24 Meta, G01-G11 Google, X01-X02 ambas plataformas.
+# Toda accion que suba gasto es 'approval' (spec.md FR-11/FR-12); el dominio
+# rechaza cualquier excepcion en carga (rules/domain/rule.py).
+rules:
+- code: M01
+  platform: meta
+  entity_level: ad_set
+  description: 'ROAS por encima del objetivo hoy: subir presupuesto antes de las 19:00.'
+  conditions:
+  - metric: roas
+    comparator: gt
+    window: t
+    threshold_kind: target_relative_pct
+    value: 120
+  action_kind: buy
+  magnitude_pct: 40
+  autonomy_level: approval
+  cooldown_hours: 0
+  source_url: https://bir.ch/blog/our-automation-setup-to-manage-a-2m-month-spend-facebook-ad-account
+  notes: Ventana de aplicacion antes de las 19:00 hora de la cuenta; no modelada como clausula.
+- code: M02
+  platform: meta
+  entity_level: ad_set
+  description: 'ROAS por encima del objetivo en 7D: subir presupuesto diario a medianoche.'
+  conditions:
+  - metric: roas
+    comparator: gt
+    window: 7d
+    threshold_kind: target_relative_pct
+    value: 110
+  action_kind: buy
+  magnitude_pct: 30
+  autonomy_level: approval
+  cooldown_hours: 24
+  source_url: https://bir.ch/facebook-automated-rules
+  notes: 'Fuente: auto si <=20%, approval si mayor. Anulado por FR-12: toda subida exige aprobacion.'
+- code: M03
+  platform: meta
+  entity_level: ad_set
+  description: ROAS por encima del objetivo 3 dias consecutivos.
+  conditions:
+  - metric: roas
+    comparator: gte
+    window: 3d
+    threshold_kind: target_relative_pct
+    value: 100
+  action_kind: buy
+  magnitude_pct: 20
+  autonomy_level: approval
+  cooldown_hours: 24
+  source_url: https://bir.ch/facebook-ads/automated-rules
+  notes: 'Fuente: auto. Anulado por FR-12: toda subida exige aprobacion.'
+- code: M04
+  platform: meta
+  entity_level: ad_set
+  description: CPA por debajo del objetivo hoy con gasto minimo suficiente.
+  conditions:
+  - metric: cpa_minor
+    comparator: lte
+    window: t
+    threshold_kind: target_relative_pct
+    value: 100
+  - metric: spend_minor
+    comparator: gt
+    window: t
+    threshold_kind: absolute
+    value: 5000
+  action_kind: buy
+  magnitude_pct: 20
+  autonomy_level: approval
+  cooldown_hours: 24
+  source_url: https://bir.ch/facebook-automated-rules
+  notes: 'Fuente: auto, limit=presupuesto maximo. Anulado por FR-12: toda subida exige aprobacion.'
+- code: M05
+  platform: meta
+  entity_level: ad_set
+  description: ROAS por debajo del objetivo en 3D y 7D a la vez.
+  conditions:
+  - metric: roas
+    comparator: lt
+    window: 3d
+    threshold_kind: target_relative_pct
+    value: 100
+  - metric: roas
+    comparator: lt
+    window: 7d
+    threshold_kind: target_relative_pct
+    value: 100
+  action_kind: sell
+  magnitude_pct: 30
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://bir.ch/blog/our-automation-setup-to-manage-a-2m-month-spend-facebook-ad-account
+  notes: null
+- code: M06
+  platform: meta
+  entity_level: ad_set
+  description: 'CPA por encima del objetivo hoy con gasto minimo suficiente: bajar, no pausar.'
+  conditions:
+  - metric: cpa_minor
+    comparator: gt
+    window: t
+    threshold_kind: target_relative_pct
+    value: 100
+  - metric: spend_minor
+    comparator: gt
+    window: t
+    threshold_kind: absolute
+    value: 5000
+  action_kind: sell
+  magnitude_pct: 20
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://bir.ch/facebook-automated-rules
+  notes: null
+- code: M07
+  platform: meta
+  entity_level: ad_set
+  description: CPA entre 1.5x y 2x el objetivo en 7D, ya fuera de aprendizaje.
+  conditions:
+  - metric: cpa_minor
+    comparator: gte
+    window: 7d
+    threshold_kind: target_relative_pct
+    value: 150
+  - metric: cpa_minor
+    comparator: lte
+    window: 7d
+    threshold_kind: target_relative_pct
+    value: 200
+  action_kind: exit
+  magnitude_pct: null
+  autonomy_level: approval
+  cooldown_hours: 24
+  source_url: https://coinis.com/how-to/when-to-kill-facebook-ad
+  notes: null
+- code: M08
+  platform: meta
+  entity_level: ad_set
+  description: ROAS por debajo del 50% del objetivo en 7D.
+  conditions:
+  - metric: roas
+    comparator: lte
+    window: 7d
+    threshold_kind: target_relative_pct
+    value: 50
+  action_kind: exit
+  magnitude_pct: null
+  autonomy_level: approval
+  cooldown_hours: 24
+  source_url: https://coinis.com/how-to/when-to-kill-facebook-ad
+  notes: null
+- code: M09
+  platform: meta
+  entity_level: ad
+  description: Cero conversiones en 7D con gasto de al menos 5x el CPA objetivo.
+  conditions:
+  - metric: conversions
+    comparator: eq
+    window: 7d
+    threshold_kind: absolute
+    value: 0
+  - metric: spend_minor
+    comparator: gte
+    window: 7d
+    threshold_kind: target_relative_pct
+    value: 500
+  action_kind: exit
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://taylorsicard.com/blog/meta-ads-creative-benchmarks-2026
+  notes: Fuente da un rango 5-10x; se calibra a 5x por defecto (umbral editable).
+- code: M10
+  platform: meta
+  entity_level: ad
+  description: ROAS por debajo del objetivo en 3D o en 7D.
+  conditions:
+  - metric: roas
+    comparator: lt
+    window: 3d_or_7d
+    threshold_kind: target_relative_pct
+    value: 100
+  action_kind: exit
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://bir.ch/blog/our-automation-setup-to-manage-a-2m-month-spend-facebook-ad-account
+  notes: Condicion real es OR entre 3D y 7D; el evaluador declarativo de esta iteracion solo modela AND
+    de clausulas. Marcada para ampliar el evaluador antes de activarla.
+- code: M11
+  platform: meta
+  entity_level: ad
+  description: Reanudar un anuncio pausado en los ultimos 7D cuyo ROAS ya supera el objetivo por conversiones
+    tardias (safety net).
+  conditions:
+  - metric: roas
+    comparator: gt
+    window: 7d
+    threshold_kind: target_relative_pct
+    value: 100
+  action_kind: unpause
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://bir.ch/blog/our-automation-setup-to-manage-a-2m-month-spend-facebook-ad-account
+  notes: data-model.md nombra explicitamente 'reanudar por conversion tardia' como AUTO permitido.
+- code: M12
+  platform: meta
+  entity_level: campaign
+  description: CPM y CPC duplican la linea base intradia (15 min).
+  conditions:
+  - metric: cpm_minor
+    comparator: gte
+    window: intraday_15m
+    threshold_kind: baseline_relative_pct
+    value: 200
+  - metric: cpc_minor
+    comparator: gte
+    window: intraday_15m
+    threshold_kind: baseline_relative_pct
+    value: 200
+  action_kind: exit
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 1
+  source_url: https://bir.ch/blog/our-automation-setup-to-manage-a-2m-month-spend-facebook-ad-account
+  notes: Incluye alerta ademas de la pausa (no modelada como accion separada).
+- code: M13
+  platform: meta
+  entity_level: ad
+  description: Frecuencia alta, CTR bajo e impresiones suficientes en 7D.
+  conditions:
+  - metric: frequency
+    comparator: gt
+    window: 7d
+    threshold_kind: absolute
+    value: 3.0
+  - metric: ctr
+    comparator: lt
+    window: 7d
+    threshold_kind: absolute
+    value: 0.008
+  - metric: impressions
+    comparator: gt
+    window: 7d
+    threshold_kind: absolute
+    value: 8000
+  action_kind: exit
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://wevion.ai/en/blog/auto-pause-facebook-ads-low-performance/
+  notes: null
+- code: M14
+  platform: meta
+  entity_level: ad_set
+  description: 'Fatiga por frecuencia en ad set frio: frecuencia >=3.5 en 7D.'
+  conditions:
+  - metric: frequency
+    comparator: gte
+    window: 7d
+    threshold_kind: absolute
+    value: 3.5
+  action_kind: sell
+  magnitude_pct: 50
+  autonomy_level: approval
+  cooldown_hours: 24
+  source_url: https://www.adamigo.ai/blog/meta-ads-frequency-benchmarks-when-ads-start-fatiguing
+  notes: Umbral >3.0 es aviso de refresco de creatividad (notify), no codificado como fila aparte.
+- code: M15
+  platform: meta
+  entity_level: ad_set
+  description: 'Frecuencia alta en ad set de retargeting: >6.0 en 7D.'
+  conditions:
+  - metric: frequency
+    comparator: gt
+    window: 7d
+    threshold_kind: absolute
+    value: 6.0
+  action_kind: sell
+  magnitude_pct: 30
+  autonomy_level: approval
+  cooldown_hours: 24
+  source_url: https://www.adamigo.ai/blog/meta-ads-frequency-benchmarks-when-ads-start-fatiguing
+  notes: null
+- code: M16
+  platform: meta
+  entity_level: ad
+  description: CTR cae al menos 20% frente a la linea base de 14D.
+  conditions:
+  - metric: ctr
+    comparator: lte
+    window: 7d
+    threshold_kind: baseline_relative_pct
+    value: -20
+  action_kind: creative_kill
+  magnitude_pct: null
+  autonomy_level: approval
+  cooldown_hours: 24
+  source_url: https://www.adsights.ai/blog/topics/creative-strategy/creative-fatigue-in-meta-ads-detection-and-management-strategies
+  notes: Caida de -10% en 7D es aviso (notify), no codificada como fila aparte.
+- code: M17
+  platform: meta
+  entity_level: ad_set
+  description: CPA sube al menos 30% frente a la linea base de 14D.
+  conditions:
+  - metric: cpa_minor
+    comparator: gte
+    window: 14d
+    threshold_kind: baseline_relative_pct
+    value: 30
+  action_kind: sell
+  magnitude_pct: 20
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://www.adamigo.ai/blog/meta-ads-frequency-benchmarks-when-ads-start-fatiguing
+  notes: Subida de +15% en 7D es aviso (notify), no codificada como fila aparte.
+- code: M18
+  platform: meta
+  entity_level: ad_set
+  description: CPM sube al menos 15% frente a la linea base de 14D sin evento de subasta.
+  conditions:
+  - metric: cpm_minor
+    comparator: gte
+    window: 14d
+    threshold_kind: baseline_relative_pct
+    value: 15
+  action_kind: notify_only
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://www.adamigo.ai/blog/meta-ads-frequency-benchmarks-when-ads-start-fatiguing
+  notes: Indicador adelantado; solo notifica.
+- code: M19
+  platform: meta
+  entity_level: ad
+  description: Estado de entrega 'Creative fatigue' (coste/resultado >=2x el historico).
+  conditions:
+  - metric: cpa_minor
+    comparator: gte
+    window: live
+    threshold_kind: baseline_relative_pct
+    value: 200
+  action_kind: creative_kill
+  magnitude_pct: null
+  autonomy_level: approval
+  cooldown_hours: 24
+  source_url: https://www.facebook.com/business/help/1346816142327858
+  notes: Recomendado lanzar 2-4 variantes antes de retirar.
+- code: M20
+  platform: meta
+  entity_level: ad
+  description: Estado de entrega 'Creative limited' en las primeras 48h.
+  conditions:
+  - metric: delivery_status_creative_limited
+    comparator: eq
+    window: live
+    threshold_kind: absolute
+    value: 1
+  action_kind: hold_all
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 48
+  source_url: https://www.jonloomer.com/creative-fatigue-meta-ads/
+  notes: Metrica booleana codificada como 1/0.
+- code: M21
+  platform: meta
+  entity_level: ad
+  description: Hook rate por debajo del 20% con al menos 1000 impresiones (video).
+  conditions:
+  - metric: hook_rate
+    comparator: lt
+    window: 7d
+    threshold_kind: absolute
+    value: 0.2
+  - metric: impressions
+    comparator: gte
+    window: 7d
+    threshold_kind: absolute
+    value: 1000
+  action_kind: creative_kill
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://adlibrary.com/posts/hook-rate
+  notes: 'Rama ''scale'' (hook>=30% y hold>=45%) no codificada como fila aparte: subiria gasto y exigiria
+    su propia fila con approval (FR-12).'
+- code: M22
+  platform: meta
+  entity_level: ad
+  description: CTR por debajo del 1% en 7D.
+  conditions:
+  - metric: ctr
+    comparator: lt
+    window: 7d
+    threshold_kind: absolute
+    value: 0.01
+  action_kind: creative_kill
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://taylorsicard.com/blog/meta-ads-creative-benchmarks-2026
+  notes: CTR>=2%/3% son solo candidatos a escalar (notify), no codificados como fila aparte.
+- code: M23
+  platform: meta
+  entity_level: ad_set
+  description: 'Entidad en fase de aprendizaje o fallida: retener todas las reglas de presupuesto.'
+  conditions:
+  - metric: learning_stage_status
+    comparator: ne
+    window: live
+    threshold_kind: absolute
+    value: 2
+  action_kind: hold_all
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 0
+  source_url: https://developers.facebook.com/docs/marketing-api/reference/ad-campaign-learning-stage-info/
+  notes: 'learning_stage_status: 0=LEARNING, 1=FAIL, 2=SUCCESS; aplica a cualquier nivel Meta.'
+- code: M24
+  platform: meta
+  entity_level: campaign
+  description: Ad set con bajo rendimiento dentro de un presupuesto de campana Advantage+.
+  conditions:
+  - metric: roas
+    comparator: lt
+    window: 7d
+    threshold_kind: target_relative_pct
+    value: 100
+  action_kind: hold_all
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://www.jonloomer.com/advantage-campaign-budget-best-practices/
+  notes: Dejar que el CBO lo desangre; fijar limite de gasto medio, no pausar.
+- code: G01
+  platform: google
+  entity_level: campaign
+  description: 'Limitada por presupuesto y en objetivo: cuota perdida por presupuesto >20% en 7D.'
+  conditions:
+  - metric: search_lost_is_budget_pct
+    comparator: gt
+    window: 7d
+    threshold_kind: absolute
+    value: 20
+  - metric: roas
+    comparator: gte
+    window: 7d
+    threshold_kind: target_relative_pct
+    value: 95
+  action_kind: buy
+  magnitude_pct: 20
+  autonomy_level: approval
+  cooldown_hours: 24
+  source_url: https://support.google.com/google-ads/answer/6385220
+  notes: 'Fuente: auto <=20%, approval si mayor. Anulado por FR-12: toda subida exige aprobacion.'
+- code: G02
+  platform: google
+  entity_level: campaign
+  description: Cuota perdida dominada por ranking, no por presupuesto.
+  conditions:
+  - metric: search_lost_is_rank_pct
+    comparator: gt
+    window: 7d
+    threshold_kind: absolute
+    value: 20
+  action_kind: hold_all
+  magnitude_pct: null
+  autonomy_level: notify
+  cooldown_hours: 24
+  source_url: https://support.google.com/google-ads/answer/2497703
+  notes: Notifica revision de Quality Score / pujas; no toca presupuesto.
+- code: G03
+  platform: google
+  entity_level: campaign
+  description: Estrategia tCPA/tROAS ya no en aprendizaje, supera el objetivo mas de 15% en 30D.
+  conditions:
+  - metric: roas
+    comparator: gte
+    window: 30d
+    threshold_kind: target_relative_pct
+    value: 115
+  - metric: conversions
+    comparator: gte
+    window: 30d
+    threshold_kind: absolute
+    value: 30
+  action_kind: tighten_target
+  magnitude_pct: 20
+  autonomy_level: approval
+  cooldown_hours: 168
+  source_url: https://support.google.com/google-ads/answer/10276704
+  notes: Esperar 7 dias tras el cambio antes de tocar el objetivo de nuevo.
+- code: G04
+  platform: google
+  entity_level: campaign
+  description: CPA por encima del 120% del objetivo en 30D, ya fuera de aprendizaje.
+  conditions:
+  - metric: cpa_minor
+    comparator: gt
+    window: 30d
+    threshold_kind: target_relative_pct
+    value: 120
+  action_kind: sell
+  magnitude_pct: 20
+  autonomy_level: approval
+  cooldown_hours: 168
+  source_url: https://support.google.com/google-ads/answer/10276704
+  notes: Alternativa 'aflojar objetivo' no codificada como fila aparte.
+- code: G05
+  platform: google
+  entity_level: campaign
+  description: Cero conversiones en 30D con gasto superior a 5x el CPA objetivo.
+  conditions:
+  - metric: conversions
+    comparator: eq
+    window: 30d
+    threshold_kind: absolute
+    value: 0
+  - metric: spend_minor
+    comparator: gt
+    window: 30d
+    threshold_kind: target_relative_pct
+    value: 500
+  action_kind: exit
+  magnitude_pct: null
+  autonomy_level: approval
+  cooldown_hours: 24
+  source_url: https://developers.google.com/google-ads/scripts/docs/solutions/account-anomaly-detector
+  notes: OPINION, calibrado por analogia con M09.
+- code: G06
+  platform: google
+  entity_level: ad_set
+  description: Termino de busqueda con clics suficientes, cero conversiones y coste >2x tCPA en 30D.
+  conditions:
+  - metric: clicks
+    comparator: gte
+    window: 30d
+    threshold_kind: absolute
+    value: 10
+  - metric: conversions
+    comparator: eq
+    window: 30d
+    threshold_kind: absolute
+    value: 0
+  - metric: spend_minor
+    comparator: gt
+    window: 30d
+    threshold_kind: target_relative_pct
+    value: 200
+  action_kind: add_negative_keyword
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://support.google.com/google-ads/answer/7102466
+  notes: Auto solo para terminos que nunca convirtieron; si convirtio alguna vez exige aprobacion.
+- code: G07
+  platform: google
+  entity_level: ad_set
+  description: Componente de Quality Score por debajo de la media (rolling 90D).
+  conditions:
+  - metric: quality_score_component_below_average
+    comparator: eq
+    window: 90d
+    threshold_kind: absolute
+    value: 1
+  action_kind: notify_only
+  magnitude_pct: null
+  autonomy_level: notify
+  cooldown_hours: 168
+  source_url: https://support.google.com/google-ads/answer/6167118
+  notes: Metrica booleana codificada como 1/0.
+- code: G08
+  platform: google
+  entity_level: ad_set
+  description: Etiqueta de rendimiento de un activo de Performance Max en 'Low'.
+  conditions:
+  - metric: performance_label_low
+    comparator: eq
+    window: live
+    threshold_kind: absolute
+    value: 1
+  action_kind: replace_asset
+  magnitude_pct: null
+  autonomy_level: approval
+  cooldown_hours: 24
+  source_url: https://support.google.com/google-ads/answer/13872527
+  notes: Metrica booleana codificada como 1/0.
+- code: G09
+  platform: google
+  entity_level: ad
+  description: Clics invalidos por encima del 30% hoy.
+  conditions:
+  - metric: invalid_clicks_pct
+    comparator: gt
+    window: t
+    threshold_kind: absolute
+    value: 30
+  action_kind: exit
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://blog.promonavigator.com/anomaly-detector-scripts/
+  notes: null
+- code: G10
+  platform: google
+  entity_level: account
+  description: Impresiones/clics/conversiones o coste se desvian de la media del mismo dia de la semana
+    (26 semanas, ultimas 3h ignoradas).
+  conditions:
+  - metric: same_weekday_z
+    comparator: gte
+    window: hourly
+    threshold_kind: absolute
+    value: 2
+  action_kind: notify_only
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://developers.google.com/google-ads/scripts/docs/solutions/account-anomaly-detector
+  notes: Maximo un aviso por tipo y dia.
+- code: G11
+  platform: google
+  entity_level: campaign
+  description: 'Indice de ritmo mensual por encima de 115% con al menos 7 dias restantes: bajar.'
+  conditions:
+  - metric: pace_index
+    comparator: gt
+    window: month_to_date
+    threshold_kind: absolute
+    value: 1.15
+  action_kind: sell
+  magnitude_pct: 20
+  autonomy_level: auto
+  cooldown_hours: 24
+  source_url: https://www.get-ryze.ai/blog/google-ads-daily-and-monthly-budget-pacing-rules
+  notes: 'Cubre solo el sobre-ritmo (SELL, defensivo). El bajo-ritmo (<85% proyectado, BUY) no se codifica
+    aqui: exigiria su propia fila con approval (FR-12).'
+- code: X01
+  platform: null
+  entity_level: campaign
+  description: 'Pico de gasto diario: al menos 3x la media diaria.'
+  conditions:
+  - metric: spend_minor
+    comparator: gt
+    window: t
+    threshold_kind: baseline_relative_pct
+    value: 300
+  action_kind: hold_all
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 1
+  source_url: https://improvado.io/blog/marketing-anomaly-detection-automated-alerts
+  notes: Notifica y congela reglas BUY hasta revision; aplica a Google y Meta.
+- code: X02
+  platform: null
+  entity_level: campaign
+  description: '2-3 intervalos horarios consecutivos anomalos: escalar segun magnitud.'
+  conditions:
+  - metric: ewma_drift
+    comparator: gte
+    window: hourly
+    threshold_kind: absolute
+    value: 0.2
+  action_kind: notify_only
+  magnitude_pct: null
+  autonomy_level: auto
+  cooldown_hours: 1
+  source_url: https://improvado.io/blog/marketing-anomaly-detection-automated-alerts
+  notes: +20% de drift en CPA escala a chat; +200% escala a pagina. Aplica a Google y Meta.

@@ -1,0 +1,9 @@
+-- T162 (broker/platforms/google_ads_adapter.py: _AD_GROUP_FIELDS + _build_select("ad_group")).
+-- Inventario de conjuntos de anuncios (GoogleAdsAdapter.fetch_account_
+-- inventory, rama ad_group_query, y GoogleAdsAdapter.read_entity_state para
+-- entity_ref de nivel ad_set). Mismo criterio que campaign_inventory.gaql:
+-- el llamador anade el filtro por resource_name cuando lo necesita.
+SELECT ad_group.resource_name, ad_group.id, ad_group.name, ad_group.status,
+       ad_group.campaign, customer.currency_code
+  FROM ad_group
+ WHERE ad_group.status != 'REMOVED'

@@ -1,0 +1,92 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.label {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  height: 28px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+}
+
+.floorChip {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--border-default);
+  background: transparent;
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+}
+
+.chipRemove {
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: var(--fs-sm);
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.row {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.input {
+  flex: 1;
+  min-width: 200px;
+  height: 32px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.input[aria-invalid="true"] {
+  border-color: var(--st-freno-line);
+}
+
+.addButton {
+  height: 32px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.error {
+  font-size: var(--fs-xs);
+  color: var(--st-freno-text);
+}

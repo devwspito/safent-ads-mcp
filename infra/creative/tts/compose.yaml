@@ -1,0 +1,73 @@
+# ads-creative-tts — Chatterbox-TTS-Server (cu130), Spanish VO for Safent Ads.
+#
+# NOT STARTED YET (per task scope). Setup:
+#   cd infra/creative/tts   # desde la raíz del repo
+#   git clone --depth=1 https://github.com/devnen/Chatterbox-TTS-Server.git
+#   docker compose build      # builds Dockerfile.cu130 from the cloned repo
+#   docker compose up -d
+#
+# We do not vendor devnen/Chatterbox-TTS-Server's Dockerfile.cu130 into this
+# repo (reuse-before-writing: it's the maintainer's own build, referencing it
+# via `context:` below keeps us on their fixes instead of a stale copy).
+# Model weights for ResembleAI/Chatterbox-Multilingual-es-es can optionally
+# be pre-staged via ../models/download.sh --with-tts into
+# $ADS_CREATIVE_MODELS_ROOT/chatterbox-multilingual-es-es/ and
+# bind-mounted read-only below — the server also self-downloads into its own
+# model_cache/ on first request if you skip that.
+name: ads-creative
+
+services:
+  ads-creative-tts:
+    build:
+      context: ./Chatterbox-TTS-Server
+      dockerfile: Dockerfile.cu130
+      args:
+        RUNTIME: nvidia
+    image: ads-creative-tts:cu130
+    container_name: ads-creative-tts
+    restart: "no"   # NUNCA autoarranque: la generación local tumbó la DGX 4 veces (9-sep)
+    ports:
+      - "127.0.0.1:8004:8004"
+    volumes:
+      - ads-creative-tts-model-cache:/app/model_cache
+      - ads-creative-tts-reference-audio:/app/reference_audio
+      - ads-creative-tts-outputs:/app/outputs
+      - ads-creative-tts-voices:/app/voices
+      - ads-creative-tts-logs:/app/logs
+      - ./config.yaml:/app/config.yaml:ro
+      # Pre-staged weights (optional — see header comment above):
+      - ${ADS_CREATIVE_MODELS_ROOT:-${HOME}/models/creative}/chatterbox-multilingual-es-es:/app/hf_cache/chatterbox-multilingual-es-es:ro
+    environment:
+      # HF_TOKEN only needed if the pre-staged mount above is skipped and the
+      # server has to pull from the Hub itself. Comes from the shell env /
+      # secrets manager — never hardcode it here.
+      - HF_TOKEN=${HF_TOKEN:-}
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  ads-creative-tts-model-cache:
+    name: ads-creative-tts-model-cache
+  ads-creative-tts-reference-audio:
+    name: ads-creative-tts-reference-audio
+  ads-creative-tts-outputs:
+    name: ads-creative-tts-outputs
+  ads-creative-tts-voices:
+    name: ads-creative-tts-voices
+  ads-creative-tts-logs:
+    name: ads-creative-tts-logs

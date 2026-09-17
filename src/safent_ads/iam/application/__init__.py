@@ -1,0 +1,2 @@
+"""Casos de uso y puertos de iam; orquesta el dominio, no contiene reglas de negocio
+propias."""

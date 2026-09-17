@@ -1,0 +1,203 @@
+name: release
+
+# `release.yml` DEL ARBOL PUBLICO -- este fichero nunca corre en el repo
+# privado: el exportador estandar lo copia sobre su destino en el paso de
+# sustitucion (T047, plan.md §9) y borra el directorio de origen del arbol
+# exportado, asi que solo queda su destino. El comprobador de paridad
+# simula la misma sustitucion antes de comparar -- SC-003 no puede leer
+# esto como una divergencia de codigo, es la UNICA diferencia a proposito.
+#
+# Por que el privado no puede llevar este mismo fichero tal cual: publica
+# bajo la identidad de repositorio del arbol donde corre
+# (`ghcr.io/${GITHUB_REPOSITORY,,}`, nunca un nombre fijo -- el repo
+# publico puede renombrarse o forkearse sin tocar una linea; en minusculas
+# porque GHCR rechaza rutas con mayusculas) y con la
+# cadena de suministro que un repositorio PUBLICO necesita y uno privado
+# no: procedencia SLSA, SBOM y firma keyless de cosign contra el OIDC de
+# Actions. El repo privado sigue con su propio `release.yml`, intacto.
+#
+# Disparador: SOLO un tag `v*`, igual que el privado -- "no publishing
+# from a developer machine", y nunca en `push: branches` ni en
+# `pull_request`. El resto del pipeline (lint/type/test/build sin push) ya
+# corre en cada PR via `ci.yml`, que SI viaja tal cual.
+on:
+  push:
+    tags:
+      - "v*"
+
+# Minimo de permisos por defecto; cada job pide solo lo que usa.
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build native ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-22.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # GHCR exige rutas en minusculas; `github.repository` conserva las
+      # mayusculas del propietario o del nombre del repo tal cual estan en
+      # GitHub. Sin esto, un fork bajo una cuenta con mayusculas rompe en
+      # el primer push a un tag -- justo lo que "sin org fija" (arriba)
+      # promete que no pasa.
+      - name: Compute lowercase image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Cada arquitectura se construye de forma nativa; evitar emulacion
+      # QEMU acelera las comprobaciones y mantiene identico Containerfile
+      # (mismo criterio que el release.yml privado).
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # `provenance: mode=max` + `sbom: true`: procedencia SLSA COMPLETA
+      # (materiales, definicion de build, no solo el resumen minimo) y
+      # SBOM SPDX, anexados como attestations OCI del propio manifiesto --
+      # superficie de cadena de suministro que un repositorio publico
+      # exige (plan.md §9) y que `buildx imagetools create`, mas abajo,
+      # conserva al fundir las dos plataformas en un solo indice.
+      #
+      # Sin cache: `type=gha` es un cache de rama, escribible por
+      # cualquiera con permiso de fusionar a `main` -- una provenance
+      # firmada solo dice de donde salieron los BYTES declarados, nunca si
+      # esos bytes vinieron de una cache que alguien pudo envenenar antes.
+      # El camino de PR (`ci.yml`) SI la usa: ahi nunca se firma ni se
+      # publica nada, y el coste de rehacer cada capa en cada release (dos
+      # veces al mes, no en cada commit) es aceptable a cambio de que la
+      # cadena de suministro firmada no dependa de ese cache.
+      - name: Build + push immutable platform artifact
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: Containerfile
+          platforms: ${{ matrix.platform }}
+          push: true
+          provenance: mode=max
+          sbom: true
+          tags: ${{ env.IMAGE }}:build-${{ github.run_id }}-${{ matrix.arch }}
+
+  publish-index:
+    name: Publish signed multi-arch index
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      # OIDC de Actions: lo que cosign usa para firmar sin clave privada
+      # que gestionar ni rotar (firma keyless, plan.md §9).
+      id-token: write
+    steps:
+      # Cada job arranca en un runner limpio: el `env` que el job `build`
+      # calculó no cruza a este job, así que se recalcula igual aquí.
+      - name: Compute lowercase image name
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      # Fusiona SOLO los dos artefactos de ESTA pasada de workflow (nunca
+      # otra ni "latest"): un reintento tras un fallo reutiliza la
+      # arquitectura que si construyo esta misma pasada, jamas la de otra.
+      # Tags: `vX.Y.Z` (el propio tag que disparo el release) y
+      # `sha-<sha-corto>` -- sin `latest`: un `latest` movil es incompatible
+      # con "despliegue por digest", que es como se despliega en serio
+      # (plan.md §9).
+      #
+      # Los tags de aterrizaje `build-<run_id>-<arch>` del job `build` NO
+      # se borran tras el merge. `GITHUB_TOKEN` con `packages: write` SI
+      # puede borrar versiones de un paquete publicado por este mismo
+      # repo (Admin sobre el paquete es el valor por defecto cuando lo
+      # publica el propio `GITHUB_TOKEN`): la razon de no hacerlo aqui no
+      # es de permisos, es que borrar por API exige antes resolver el
+      # `version_id` que corresponde a cada tag (`GET .../versions`,
+      # filtrando por metadata) -- logica que este workflow no lleva ni se
+      # ha probado contra un paquete real, y apuntar a la version
+      # equivocada es peor que dejar dos tags de mas. Coste: dos tags de
+      # mas por release, inmutables, sin `latest` ni el tag de la release,
+      # que nunca aparecen en un `docker pull` de un consumidor y sirven
+      # de rastro para depurar cual de las dos arquitecturas fallo si un
+      # release se repite.
+      - name: Merge only this source-pinned workflow run
+        id: merge
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          BUILD_PREFIX="${IMAGE}:build-${GITHUB_RUN_ID}"
+          SHORT_SHA="${GITHUB_SHA:0:7}"
+          docker buildx imagetools create \
+            --tag "${IMAGE}:${RELEASE_TAG}" \
+            --tag "${IMAGE}:sha-${SHORT_SHA}" \
+            "${BUILD_PREFIX}-amd64" "${BUILD_PREFIX}-arm64"
+          # El DIGEST, no el tag: entre este merge y la firma de abajo el
+          # tag es mutable (alguien con permiso podria re-etiquetar), y
+          # una firma atada a un tag que se movio deja de decir nada sobre
+          # lo que hay publicado ahora mismo.
+          DIGEST="$(docker buildx imagetools inspect "${IMAGE}:${RELEASE_TAG}" --format '{{.Manifest.Digest}}')"
+          docker buildx imagetools inspect "${IMAGE}@${DIGEST}"
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+
+      # Firmar un indice sin procedencia ni SBOM firmaria la identidad,
+      # nunca la cadena de suministro que esta firma existe para
+      # atestiguar -- comprueba ANTES de firmar, no despues, que las dos
+      # attestations que `provenance: mode=max` + `sbom: true` (arriba)
+      # anexaron sobrevivieron al `imagetools create`.
+      #
+      # `[ -z ]`/`[ = null ]` no basta: buildx (0.31.1, verificado) imprime
+      # `{}` para un indice SIN attestations, no `""` ni `null` -- ese
+      # guardia pasaba con las manos vacias. `jq -e 'length > 0'` rechaza
+      # `{}` (longitud 0) y acepta tanto un objeto de attestation plano
+      # como la forma por plataforma (`{"linux/amd64": {...}, ...}`), que
+      # es la que produce un indice multi-arco: en los dos casos no vacios
+      # la longitud es mayor que cero.
+      - name: Verify the index carries provenance and SBOM before signing
+        env:
+          DIGEST: ${{ steps.merge.outputs.digest }}
+        run: |
+          set -euo pipefail
+          for campo in Provenance SBOM; do
+            valor="$(docker buildx imagetools inspect "${IMAGE}@${DIGEST}" --format "{{ json .${campo} }}")"
+            if ! printf '%s' "${valor}" | jq -e 'length > 0' >/dev/null; then
+              echo "release: FALLO el indice publicado no lleva ${campo} -- no se firma sin cadena de suministro completa" >&2
+              exit 1
+            fi
+          done
+
+      # Firma keyless: sin clave privada que custodiar, la identidad la da
+      # el OIDC de Actions y la transparencia queda en el log publico de
+      # Sigstore (Rekor). Firma el DIGEST resuelto arriba, nunca un tag.
+      - name: Sign the published index (cosign keyless)
+        env:
+          DIGEST: ${{ steps.merge.outputs.digest }}
+        run: cosign sign --yes "${IMAGE}@${DIGEST}"

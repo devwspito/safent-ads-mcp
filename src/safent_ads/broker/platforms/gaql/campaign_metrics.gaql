@@ -1,0 +1,11 @@
+-- T162 (broker/platforms/google_ads_adapter.py: _METRIC_FIELDS + _build_metrics_query).
+-- Sin WHERE: GoogleAdsAdapter.fetch_metrics anade "segments.date BETWEEN
+-- ... AND ..." y, si la peticion trae entity_refs, "campaign.resource_name
+-- IN (...)" -- ambos son valores de tiempo de ejecucion, nunca constantes de
+-- este fichero. `segments.hour` se inserta en la posicion 2 cuando la
+-- granularidad es horaria (mismo comportamiento que hoy).
+SELECT campaign.resource_name, segments.date, metrics.cost_micros,
+       metrics.impressions, metrics.clicks, metrics.conversions,
+       metrics.conversions_value, metrics.search_budget_lost_impression_share,
+       metrics.search_rank_lost_impression_share, customer.currency_code
+  FROM campaign

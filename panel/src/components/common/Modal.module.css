@@ -1,0 +1,32 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg-overlay);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  z-index: 100;
+  overscroll-behavior: contain;
+}
+.dialog {
+  width: min(480px, 100%);
+  max-width: 100%;
+  max-height: calc(100dvh - 48px);
+  background: var(--bg-raised);
+  border: 1px solid var(--border-default);
+  border-radius: 16px;
+  box-shadow: var(--shadow-modal);
+  overflow: auto;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition: opacity 160ms var(--ease-out), transform 180ms var(--ease-out);
+  @starting-style { opacity: 0; transform: translateY(5px) scale(.985); }
+}
+@media (max-width: 480px) {
+  .overlay { padding: 12px; }
+  .dialog { max-height: calc(100dvh - 24px); border-radius: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dialog { transition: none; @starting-style { opacity: 1; transform: none; } }
+}
+:global(html[data-ads-input='keyboard']) .dialog { transition: none; @starting-style { opacity: 1; transform: none; } }

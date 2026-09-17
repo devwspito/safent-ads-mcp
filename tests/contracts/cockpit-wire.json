@@ -1,0 +1,9 @@
+{
+  "sparkline": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+  "detail_refs": [
+    {"kind": "signal", "id": "signal-1"},
+    {"kind": "proposal", "id": "proposal-1"},
+    {"kind": "execution", "id": "execution-1"},
+    null
+  ]
+}

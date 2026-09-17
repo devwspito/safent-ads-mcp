@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <title>__ADS_INSTANCE_NAME__ · Panel</title>
+  </head>
+  <body>
+    <!--
+      Se sustituye por completo en cuanto React monta (createRoot().render() reemplaza los
+      hijos de #root) — si un bloqueador de anuncios corta la carga del bundle por el patrón
+      "ads." del dominio, esto es lo único que llega a pintarse, sin depender de JS.
+    -->
+    <div id="root">
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;text-align:center;background:#ffffff;color:#14181f;">
+        <p style="max-width:420px;margin:0;">El panel no ha podido cargar. Si usas un bloqueador de anuncios, permite __ADS_PANEL_HOST__ y recarga.</p>
+      </div>
+    </div>
+    <noscript>
+      <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;text-align:center;background:#ffffff;color:#14181f;">
+        <p style="max-width:420px;margin:0;">El panel no ha podido cargar. Si usas un bloqueador de anuncios, permite __ADS_PANEL_HOST__ y recarga.</p>
+      </div>
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

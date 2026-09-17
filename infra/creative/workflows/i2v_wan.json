@@ -1,0 +1,119 @@
+{
+  "1": {
+    "class_type": "UNETLoader",
+    "_meta": { "title": "Load Diffusion Model (Wan2.2-TI2V-5B)" },
+    "inputs": {
+      "unet_name": "wan2.2_ti2v_5B_fp16.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "_meta": { "title": "Load CLIP (umT5-XXL)" },
+    "inputs": {
+      "clip_name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "type": "wan",
+      "device": "default"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "_meta": { "title": "Load VAE" },
+    "inputs": { "vae_name": "wan2.2_vae.safetensors" }
+  },
+  "4": {
+    "class_type": "ModelSamplingSD3",
+    "_meta": { "title": "ModelSamplingSD3 (shift=8, official TI2V-5B value)" },
+    "inputs": {
+      "model": ["1", 0],
+      "shift": 8.0
+    }
+  },
+  "5": {
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "CLIP Text Encode (Positive Prompt)" },
+    "inputs": {
+      "text": "{{prompt}}",
+      "clip": ["2", 0]
+    }
+  },
+  "6": {
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Negative Prompt)",
+      "note": "Chinese negative prompt kept verbatim from the official Comfy-Org example (image_to_video_wan22_5B.json) — Wan 2.2 is a Chinese-origin model and this exact string is the maintainer-verified default, not a translation guess."
+    },
+    "inputs": {
+      "text": "色调艳丽，过曝，静态，细节模糊不清，字幕，风格，作品，画作，画面，静止，整体发灰，最差质量，低质量，JPEG压缩残留，丑陋的，残缺的，多余的手指，画得不好的手部，画得不好的脸部，畸形的，毁容的，形态畸形的肢体，手指融合，静止不动的画面，杂乱的背景，三条腿，背景人很多，倒着走",
+      "clip": ["2", 0]
+    }
+  },
+  "7": {
+    "class_type": "LoadImage",
+    "_meta": { "title": "Load Start Image" },
+    "inputs": { "image": "{{image}}" }
+  },
+  "8": {
+    "class_type": "Wan22ImageToVideoLatent",
+    "_meta": {
+      "title": "Wan22ImageToVideoLatent",
+      "note": "9:16 @ 720x1280, both multiples of 16 (Wan's VAE spatial stride). length={{frames}} — use 121 for ~5.04s at 24fps (4n+1 latent-stride length, same convention as the official example's length=41)."
+    },
+    "inputs": {
+      "vae": ["3", 0],
+      "start_image": ["7", 0],
+      "width": "{{width}}",
+      "height": "{{height}}",
+      "length": "{{frames}}",
+      "batch_size": 1
+    }
+  },
+  "9": {
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler (non-distilled, 30-step)",
+      "note": "No Lightning LoRA exists for TI2V-5B (only for the A14B MoE checkpoint — see workflows/README.md and models/download.sh) — this is the full 30-step path, steps/cfg/sampler/scheduler all taken verbatim from the official Comfy-Org example."
+    },
+    "inputs": {
+      "seed": "{{seed}}",
+      "steps": 30,
+      "cfg": 5,
+      "sampler_name": "uni_pc",
+      "scheduler": "simple",
+      "denoise": 1,
+      "model": ["4", 0],
+      "positive": ["5", 0],
+      "negative": ["6", 0],
+      "latent_image": ["8", 0]
+    }
+  },
+  "10": {
+    "class_type": "VAEDecode",
+    "_meta": { "title": "VAE Decode" },
+    "inputs": {
+      "samples": ["9", 0],
+      "vae": ["3", 0]
+    }
+  },
+  "11": {
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Create Video",
+      "note": "Official example uses SaveWEBM (vp9/webm); swapped for the core CreateVideo+SaveVideo pair (same as workflows/i2v_ltx.json) to get mp4 directly instead of a separate ffmpeg transcode step."
+    },
+    "inputs": {
+      "images": ["10", 0],
+      "fps": 24.0
+    }
+  },
+  "12": {
+    "class_type": "SaveVideo",
+    "_meta": { "title": "Save Video" },
+    "inputs": {
+      "video": ["11", 0],
+      "filename_prefix": "ads-creative-wan",
+      "format": "auto",
+      "codec": "auto"
+    }
+  }
+}

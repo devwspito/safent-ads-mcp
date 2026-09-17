@@ -1,0 +1,22 @@
+.git
+.venv
+.pytest_cache
+.mypy_cache
+.ruff_cache
+__pycache__
+*.pyc
+.env
+secrets/
+tests/
+specs/
+infra/
+!infra/native-mcp/requirements.lock
+.github/
+*.md
+!README.md
+# panel-builder (Containerfile) compila `panel/` dentro de la imagen --
+# node_modules/dist locales nunca deben viajar en el contexto de build
+# (bloatan el contexto y `dist/` local podria pisar al build reproducible).
+panel/node_modules
+panel/dist
+panel/coverage

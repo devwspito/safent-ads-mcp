@@ -1,0 +1,10 @@
+safent-ads
+Copyright 2026 Safent contributors
+
+This product includes software developed by the Safent contributors.
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party dependencies keep their own licenses:
+  - Python: pyproject.toml, uv.lock
+  - Panel:  panel/package.json, panel/package-lock.json

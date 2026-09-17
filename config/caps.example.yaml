@@ -1,0 +1,84 @@
+# Plantilla de topes duros del broker (tasks.md T066; plan.md §3.3, §15
+# D-A1; threat-model.md C-17). Estos son los ultimos topes antes de tocar
+# una plataforma real: aunque `ads-db` o el propio `ads-api` esten
+# comprometidos, `ads-broker` los vuelve a aplicar el mismo, desde un
+# fichero que `ads-api` no puede escribir (data-model.md GuardrailSet es el
+# equivalente a nivel de dominio respaldado por Postgres; este fichero es
+# la copia de guarda independiente).
+#
+# Uso:
+#   cp config/caps.example.yaml config/caps.yaml
+#   sudo chown root:root config/caps.yaml && sudo chmod 644 config/caps.yaml
+#   # editar accounts: con los platform_account_id reales
+#   make check-secrets   # verifica permisos antes de `make up`
+#
+# `config/caps.yaml` (el real) esta en .gitignore -- NUNCA se commitea.
+# `ads-broker` lo monta de solo lectura en /etc/ads-broker/caps.yaml
+# (ADS_BROKER_HARD_CAPS_FILE); ni ads-api ni ads-worker lo ven (compose.yaml).
+# Carga y valida: src/safent_ads/broker/infrastructure/caps_config.py
+# (fail-closed: fichero ausente/invalido o cuenta sin entrada -> excepcion,
+# nunca un tope permisivo por omision).
+
+defaults:
+  # D-A1 (plan.md §15, defectos de spec.md): bajada maxima 30% por cambio,
+  # 2 cambios/campana/dia, autonomia DESACTIVADA hasta que el propietario
+  # confirme las preguntas 2/3/8 de spec.md y C-1/C-2/C-3/C-15/C-16/C-17/C-27
+  # esten verdes (tasks.md T120). No subir `autonomy_enabled` a `true` sin
+  # esa confirmacion explicita.
+  max_step_pct: 30
+  max_changes_per_day: 2
+  autonomy_enabled: false
+
+accounts:
+  # Una entrada por platform_account_id REAL (el id de cuenta en Google Ads
+  # o Meta Ads, no un nombre interno del negocio). Ejemplo de esquema --
+  # borrar esta entrada antes de anadir cuentas reales.
+  "example_platform_account_id":
+    daily_cap_minor: 10000 # 100,00 EUR/dia -- ajustar por cuenta, sin defecto razonable
+    # D-A1: tope mensual = media de gasto reportado de los ultimos 3 meses
+    # +10%. Placeholder hasta tener 3 meses de metricas ingeridas
+    # (metrics/application/ComputeFreshness); una tarea futura lo derivara
+    # automaticamente. Hasta entonces, recalcular a mano cada mes.
+    monthly_cap_minor: 300000 # 3000,00 EUR/mes -- placeholder, ver arriba
+    floor_minor: 500 # 5,00 EUR/dia -- nunca bajar de aqui en solitario
+    ceiling_minor: 50000 # 500,00 EUR/dia -- nunca subir de aqui en solitario
+    # max_step_pct, max_changes_per_day y autonomy_enabled son opcionales
+    # por cuenta: si se omiten, se toman de `defaults` de arriba.
+
+# --- Sobre de gasto para los topes desde el panel (spec 008, OPCIONAL) ---
+#
+# AUSENTE = el panel NO puede fijar ningun tope. Ese es el comportamiento
+# por defecto y el de siempre: los topes vienen solo de `accounts:` de
+# arriba, que ni `ads-api` ni nadie mas puede escribir.
+#
+# Descomentar este bloque abre una superficie nueva: el propietario puede
+# fijar `daily_cap_minor`, `monthly_cap_minor` y `ceiling_minor` por cuenta
+# desde Ajustes -> Topes, SIEMPRE dentro de estos maximos. Un `ads-api`
+# comprometido podria mover topes dentro del sobre -- nunca por encima.
+# Quien no quiera ni eso, deja el bloque comentado.
+#
+# Los SIETE campos son obligatorios y NO tienen valor por defecto a
+# proposito: los eliges tu. Un sobre a medias no valida y el broker no
+# arranca, nombrando el campo que falta.
+#
+# ORDEN DE DESPLIEGUE: primero la imagen que entiende el bloque, despues el
+# bloque. `caps.yaml` se valida con esquema cerrado, asi que un
+# `panel_managed:` leido por una imagen vieja no da un aviso -- deja al
+# broker sin arrancar.
+#
+# Con el sobre declarado, las claves de `accounts:` deben escribirse en su
+# forma canonica (Google: 10 digitos sin guiones; Meta: `act_<id>`), porque
+# el estado del panel se guarda bajo esa forma y `min(fichero, panel)` solo
+# se aplica si las dos coinciden.
+#
+# Requiere ademas `ADS_BROKER_CAPS_STATE_DIR` (0700, propiedad del usuario
+# del broker; referencia: /var/lib/ads-broker/caps-state).
+#
+# panel_managed:
+#   currency: EUR                   # ISO-4217; una instancia, una divisa
+#   max_daily_cap_minor: 5000       # tope diario maximo por cuenta, en centimos
+#   max_monthly_cap_minor: 100000   # tope mensual maximo por cuenta
+#   max_ceiling_minor: 20000        # presupuesto maximo EN PIE por entidad
+#   min_floor_minor: 500            # suelo de una cuenta solo-panel
+#   max_accounts: 3                 # cuantas cuentas puede tocar el panel
+#   max_cap_changes_per_day: 10     # cambios de tope por dia natural (UTC)

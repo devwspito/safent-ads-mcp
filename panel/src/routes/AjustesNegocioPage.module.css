@@ -1,0 +1,52 @@
+.backLink {
+  display: inline-block;
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.section {
+  margin-top: var(--sp-8);
+}
+
+.sectionTitle {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-secondary);
+  margin: 0 0 var(--sp-2);
+}
+
+.calendarEventRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-2) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--fs-sm);
+  flex-wrap: wrap;
+}
+
+.deleteEvent {
+  height: 28px;
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--danger-solid);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--danger-solid);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.deleteError {
+  display: block;
+  font-size: var(--fs-xs);
+  color: var(--st-freno-text);
+  margin-bottom: var(--sp-2);
+}
+
+.section form {
+  margin-top: var(--sp-4);
+}

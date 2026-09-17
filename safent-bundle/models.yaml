@@ -1,0 +1,22 @@
+# Enrutado de modelos recomendado para el Agente de Anuncios (research.md D5,
+# research/hermes-and-codex.md). Proveedor: openai-codex (OAuth de Codex);
+# respaldo por API key si el propietario lo configura.
+provider: openai-codex
+fallback_provider: openai            # OPENAI_API_KEY, opcional (D-A4)
+routing:
+  weekly_opportunities:
+    model: gpt-6-astra               # juicio: campañas nuevas, ROAS marginal
+    reasoning_effort: high
+  creative_briefs:
+    model: gpt-6-astra               # briefs y textos en español natural
+    reasoning_effort: high
+  daily_structural:
+    model: gpt-5.6-sol
+    reasoning_effort: high
+  hourly_review:
+    model: gpt-5.6-sol               # ciclo frecuente: coste/latencia contenidos
+    reasoning_effort: medium
+  digests:
+    model: gpt-5.6-luna              # redacción del digest y resúmenes cortos
+    reasoning_effort: low
+fallback_chain: [gpt-6-astra, gpt-5.6-sol, gpt-5.6-luna]

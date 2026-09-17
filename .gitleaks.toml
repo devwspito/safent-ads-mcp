@@ -1,0 +1,81 @@
+# Config de gitleaks (tasks.md T002/T016; threat-model.md C-24). Extiende
+# el ruleset por defecto de gitleaks; solo anade una lista blanca acotada
+# para las plantillas versionadas a proposito (secrets/*.env.example,
+# config/caps.example.yaml) y los placeholders `change-me*` que llevan
+# dentro -- nunca credenciales reales (.env.example y .gitignore documentan
+# lo mismo: los ficheros reales nunca se commitean).
+
+title = "safent-ads"
+
+[extend]
+useDefault = true
+
+# T084 (threat-model.md C-74/MENOR-4): `ADS_GOOGLE_OIDC_CLIENT_SECRET` es el
+# secreto COMPARTIDO con Safent Enterprise (S4, R-14) -- su radio de
+# explosion cruza dos productos, asi que lleva su propia regla explicita en
+# vez de confiar solo en la deteccion generica de alta entropia. Exige al
+# menos 8 caracteres tras el `=`/`:` para que una asignacion vacia
+# (`secrets/api.env.example`) o un placeholder corto no dispare nada; el
+# placeholder `change-me...` de abajo ya lo cubre la lista blanca generica.
+[[rules]]
+id = "safent-ads-google-oidc-client-secret"
+description = "ADS_GOOGLE_OIDC_CLIENT_SECRET con un valor real (no vacio, no placeholder)"
+regex = '''(?i)ADS_GOOGLE_OIDC_CLIENT_SECRET\s*[:=]\s*['"]?[^\s'"]{8,}['"]?'''
+keywords = ["ADS_GOOGLE_OIDC_CLIENT_SECRET"]
+
+[allowlist]
+description = "plantillas versionadas con placeholders, sin secretos reales"
+regexTarget = "match"
+# Revision de seguridad (17-sep): `gitleaks git`/`detect` en modo historial
+# completo (`fetch-depth: 0` en CI) escanea cada commit por separado -- una
+# vez que un literal queda grabado en un commit, ningun cambio posterior al
+# FICHERO lo repara; hace falta eximir ese commit por nombre. El binario
+# 8.21.2 (el que fija `.github/workflows/ci.yml`) NO encuentra el hallazgo
+# de `dispatcher.py` de mas abajo -- verificado descargando esa version
+# exacta y comparando con 8.30.1, que si lo encuentra -- asi que la entrada
+# de `commits` es la unica imprescindible hoy; la de `regexes` es una
+# defensa en profundidad barata para cuando la version de CI suba.
+commits = [
+  # b4e08c9a añadio la regla `safent-ads-google-oidc-client-secret`
+  # (T084/C-74) junto a un test cuyo EJEMPLO de valor real quedo como un
+  # literal contiguo que la propia regla nueva volvia a marcar en el
+  # historial -- nunca fue un secreto de verdad (tests/unit/
+  # test_gitleaks_config.py, reescrito para no repetirlo).
+  "b4e08c9af8983299d16fa1bf78b0ddf852c0a417",
+]
+regexes = [
+  # Nombre público del archivo generado, no su contenido; la igualdad exacta
+  # cubre también el commit histórico sin excluir gen_keys.py ni claves reales.
+  '''^KEY_FILENAME = "approval_signing_key\.b64"$''',
+  '''change-me[-\w]*''',
+  # Claves de las confirmaciones de autonomia (q2_autonomous_decrease,
+  # q3_monthly_cap, q8_browser_path): identificadores de pregunta, no secretos.
+  # generic-api-key las marcaba en todo el historial; el `# gitleaks:allow`
+  # en linea no cubre commits antiguos.
+  '''q[0-9]_[a-z_]+''',
+  # `mcp/presentation/dispatcher.py` (docstring, 5ebdf018): comentario sobre
+  # `caller_scope.granted_scopes`, no un secreto -- `generic-api-key` lo
+  # confunde por la entropia del fragmento `granted_scopes=None`. Regex
+  # PRECISA sobre esa frase exacta, nunca un path en blanco.
+  '''granted_scopes=None''',
+]
+paths = [
+  '''(^|/)\.env\.example$''',
+  '''(^|/)secrets/.*\.env\.example$''',
+  '''(^|/)config/caps\.example\.yaml$''',
+  # T084 (threat-model.md C-74/MENOR-4): la exencion de `tests/` entero
+  # exime tambien a los fixtures del CANJE OIDC nuevo -- estrechada a los
+  # DOS ficheros de toda la suite que de verdad la necesitan (verificado
+  # corriendo gitleaks sobre `tests/` sin esta linea, 17-sep): un secreto
+  # de proceso central SINTETICO de 32 caracteres literal ("0123456789abcdef"
+  # * 4, comentado como tal) y un fragmento de `id_token` codificado en
+  # base64 para probar el rechazo de un payload no-JSON. Ningun otro
+  # fichero de `tests/` dispara nada sin la exencion generica.
+  '''(^|/)tests/crossrepo/test_managed_broker_admission\.py$''',
+  '''(^|/)tests/unit/iam/test_google_oidc_provider\.py$''',
+  # Fixtures del panel (panel/src/mocks/): datos de dominio de ejemplo
+  # (p.ej. CauseKey "sin-matriculas-21d") que la regla generica de alta
+  # entropia confunde con credenciales -- nunca hay secretos en mocks de
+  # frontend, se sirven en el bundle publico.
+  '''(^|/)panel/src/mocks/.*''',
+]

@@ -1,0 +1,92 @@
+.card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-3);
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.setupDescription { flex-basis: 100%; margin: 0; font-size: var(--fs-sm); color: var(--text-secondary); line-height: 1.55; }
+.setupLink { border: 0; background: none; padding: 0; color: var(--text-secondary); font: inherit; font-size: var(--fs-xs); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.setupLink:focus-visible { outline: 2px solid var(--primary-700); outline-offset: 3px; }
+
+.label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+  min-width: 100px;
+}
+
+.button {
+  min-height: 32px;
+  padding: var(--sp-1) var(--sp-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--primary-700);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.customerField {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.customerField label {
+  color: var(--text-primary);
+  font-weight: var(--fw-medium);
+}
+
+.customerInput {
+  max-width: 180px;
+  width: 100%;
+  height: 32px;
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.customerInput:focus-visible,
+.button:focus-visible {
+  outline: 2px solid var(--primary-700);
+  outline-offset: 3px;
+}
+
+.status {
+  flex-basis: 100%;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.actionLink {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--primary-700);
+  text-decoration: underline;
+  width: 100%;
+  text-underline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.actionLink:focus-visible {
+  outline: 2px solid var(--primary-700);
+  outline-offset: 3px;
+}

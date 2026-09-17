@@ -1,0 +1,59 @@
+.gateBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-md);
+  background: var(--st-obsoleto-fill);
+  border: 1px solid var(--st-obsoleto-line);
+  color: var(--st-obsoleto-text);
+  font-size: var(--fs-sm);
+  margin-bottom: var(--sp-4);
+}
+
+.section {
+  margin-bottom: var(--sp-6);
+}
+
+.sectionTitle {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-secondary);
+  margin: 0 0 var(--sp-2);
+}
+
+.catalog {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.brakeRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.brakeButton {
+  height: 30px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--danger-solid);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--danger-solid);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.brakeButtonEngaged {
+  background: var(--danger-solid);
+  color: var(--on-danger);
+}

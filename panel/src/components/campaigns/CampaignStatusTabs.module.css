@@ -1,0 +1,40 @@
+.tablist {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  margin-bottom: var(--sp-4);
+}
+
+.tab {
+  height: 32px;
+  padding: 0 var(--sp-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .tab:hover {
+    color: var(--text-primary);
+  }
+}
+
+.tabActive {
+  background: var(--bg-raised);
+  color: var(--color-accent-text);
+  font-weight: var(--fw-bold);
+  box-shadow: var(--shadow-raised);
+}
+
+.count {
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  opacity: 0.75;
+}

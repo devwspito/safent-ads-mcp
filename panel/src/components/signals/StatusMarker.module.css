@@ -1,0 +1,46 @@
+/**
+ * Gramática de fichas de estado (visual-designer, 2026-09-16): relleno = el sistema está
+ * haciendo algo (obsoleto/degradado = warning fill); contorno = a la espera o informativo,
+ * sin relleno (insuficiente/no_controlable = neutral outline, en_aprendizaje = info outline).
+ * Los tokens `--st-*` ya alían a `--color-{warning,neutral,info}-*` en tokens.css — este
+ * archivo no fija ningún hex, solo la forma (relleno/contorno/discontinuo).
+ */
+.marker {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  border: 1px solid;
+  background: transparent;
+  white-space: nowrap;
+}
+
+.insuficiente {
+  border-color: var(--st-insuficiente-line);
+  color: var(--st-insuficiente-text);
+}
+
+.en_aprendizaje {
+  border-color: var(--st-aprendizaje-line);
+  color: var(--st-aprendizaje-text);
+}
+
+.no_controlable {
+  border-color: var(--st-nocontrolable-line);
+  color: var(--st-nocontrolable-text);
+  border-style: dashed;
+}
+
+.obsoleto {
+  border-color: var(--st-obsoleto-line);
+  background: var(--st-obsoleto-fill);
+  color: var(--st-obsoleto-text);
+}
+
+.presupuesto_compartido {
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+}

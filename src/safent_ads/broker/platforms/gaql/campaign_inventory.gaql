@@ -1,0 +1,12 @@
+-- T162 (broker/platforms/google_ads_adapter.py: _CAMPAIGN_FIELDS + _build_select("campaign")).
+-- Inventario de campanas activas (GoogleAdsAdapter.fetch_account_inventory,
+-- rama campaign_query, y GoogleAdsAdapter.read_entity_state para entity_ref
+-- de nivel campaign). El resource_name de la entidad se filtra con un AND
+-- adicional que anade el llamador para read_entity_state -- este fichero es
+-- la base comun a ambos usos.
+SELECT campaign.resource_name, campaign.id, campaign.name, campaign.status,
+       campaign_budget.resource_name, campaign_budget.amount_micros,
+       campaign_budget.type, campaign_budget.explicitly_shared,
+       customer.currency_code
+  FROM campaign
+ WHERE campaign.status != 'REMOVED'

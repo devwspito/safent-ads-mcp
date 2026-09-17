@@ -1,0 +1,20 @@
+{
+  "ref": "v0.2.45",
+  "tag": "v0.2.45",
+  "commit": "8c2331832e6976cd14d9b6cc3df55eff3ae8826b",
+  "generated_at": "2026-09-17T12:36:32Z",
+  "exported_files": 2499,
+  "file_manifest": "EXPORT-MANIFEST.txt",
+  "gitleaks_config": "scripts/lib/gitleaks-export.toml",
+  "gitleaks_config_sha256": "ca8389f186c0404c3bccbf41edf91aeb4ad71fec2e96ea935f0ec006a566f915",
+  "deleted_path_count": 25,
+  "verifications": {
+    "a": "ok",
+    "b": "ok",
+    "c": "ok",
+    "d": "ok",
+    "e": "ok",
+    "f": "ok",
+    "g": "ok"
+  }
+}

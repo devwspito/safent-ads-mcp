@@ -1,0 +1,191 @@
+.topbar {
+  height: var(--topbar-h);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-4);
+  background: var(--color-bg-translucent);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .topbar {
+    background: var(--bg-surface);
+  }
+}
+
+.leading {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+  flex: 1;
+}
+
+.select {
+  height: 32px;
+  max-width: 200px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  padding: 0 var(--sp-2);
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-1);
+  flex: 2;
+}
+
+.navLink {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  height: 36px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .navLink:hover {
+    background: var(--bg-hover);
+  }
+}
+
+.navLinkActive {
+  background: var(--bg-selected);
+  color: var(--text-primary);
+}
+
+.count {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--bg-sunken);
+  color: var(--text-secondary);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.dotRed {
+  background: var(--danger-solid);
+}
+
+.dotAmber {
+  background: var(--st-obsoleto-line);
+}
+
+.trailing {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex: 1;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.helpButton {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .helpButton:hover {
+    color: var(--text-primary);
+    border-color: var(--border-strong);
+  }
+}
+
+.brakeButton {
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .brakeButton:hover {
+    background: var(--st-freno-fill);
+  }
+}
+
+.brakeButtonEngaged {
+  background: var(--danger-solid);
+  color: var(--on-danger);
+  border-color: var(--danger-solid);
+}
+
+@media (max-width: 899px) {
+  .nav {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    gap: var(--sp-2);
+    padding-inline: 12px;
+  }
+  .select {
+    max-width: 140px;
+  }
+}
+
+.freshnessSlot {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1099px) {
+  /* La frescura exacta se puede consultar dentro de cada pantalla; a este ancho
+     compite por sitio con el negocio, los cuatro destinos y "Parar cambios". */
+  .freshnessSlot {
+    display: none;
+  }
+}
+
+@media (max-width: 390px) {
+  .select {
+    display: none;
+  }
+}

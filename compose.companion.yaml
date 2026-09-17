@@ -1,0 +1,84 @@
+# compose.companion.yaml — override para correr `ads-api` como companion
+# preinstalado de Safent (diseño del companion en el runtime, no en este
+# repo). Se aplica JUNTO
+# al compose base, nunca solo:
+#
+#   docker compose -f compose.yaml -f compose.companion.yaml config   # valida el merge
+#   docker compose -f compose.yaml -f compose.companion.yaml up -d
+#
+# `safent-companions` (10.201.0.0/24) es `external: true`: la crea el
+# instalador de Safent (o, en local, `docker network create
+# safent-companions --subnet 10.201.0.0/24`), este fichero nunca la crea
+# ni la destruye. Solo `ads-api` se une a ella, con la IP fija que el
+# runtime espera (`10.201.0.10:8443`, plan.md §1.1). `ads-db`/`ads-worker`/
+# `ads-broker` se quedan unicamente en `ads-net` (la red interna de
+# compose.yaml) -- nunca tocan `safent-companions`, defensa en profundidad
+# ademas de la regla `daddr`+`dport` unica que el runtime instala en el
+# host al arrancar (plan.md §1.5, spec.md INV-3: "Un companion abre
+# exactamente un ip daddr + un tcp dport").
+#
+# No se publica ningun puerto en el host (`ports: !reset []`): el runtime
+# alcanza `ads-api` solo a traves de esa IP fija, nunca de un mapeo de
+# puertos de Docker.
+
+networks:
+  safent-companions:
+    name: safent-companions
+    external: true
+
+services:
+  ads-api:
+    networks:
+      safent-companions:
+        ipv4_address: 10.201.0.10
+    ports: !reset []
+    environment:
+      ADS_COMPANION_MODE: "true"
+      ADS_TLS_CERTFILE: /etc/ads-companion/tls/leaf.crt
+      ADS_TLS_KEYFILE: /etc/ads-companion/tls/leaf.key
+      # El host fijo que `mcp.presentation.http._transport_security_for`
+      # usa para el allow-list anti DNS-rebinding de `/mcp` (plan.md §1.2:
+      # `companions.json.url` = "https://ads.safent.internal:8443/mcp").
+      # Sin esto seguiria el valor de desarrollo de `.env`, que no es el
+      # host que el runtime companion realmente usa.
+      ADS_PUBLIC_BASE_URL: https://ads.safent.internal:8443
+      # Nit de la revision de seguridad final (16-sep): explicito porque el
+      # smoke del instalador de Safent llama a `GET /mcp/health` con el
+      # bearer del propietario (`ADS_MCP_TOKEN`), no con OAuth -- sin esto
+      # cae al valor por defecto de `ApiSettings` (apagado) y ese smoke
+      # devolveria 401.
+      ADS_MCP_STATIC_TOKEN_ENABLED: "true"
+      # H1 de la revision de seguridad (16-sep, threat-model.md C-42/C-51):
+      # Safent conecta DIRECTO por la IP fija de `safent-companions`, sin
+      # ningun reverse proxy de por medio -- `X-Forwarded-For` nunca debe
+      # leerse aqui (el valor por defecto de `ApiSettings`, explicito para
+      # que quede documentado junto al resto de env vars del companion).
+      #
+      # M-3 (revision de seguridad 17-sep): con `hops=0`, TODO `/api/v1/
+      # auth/*` (y `/api/v1/rules/autonomy-gate*`) se particiona por la IP
+      # del socket -- que aqui es SIEMPRE la de `safent-companions`, el
+      # unico peer posible en este despliegue. Es DECIR A PROPOSITO: un
+      # solo cubo de 20/min para todo el trafico del companion, nunca uno
+      # por IP publica (no hay ninguna) -- no es el mismo hueco que B-1
+      # (varios clientes anonimos detras de UN proxy, C-76): aqui detras
+      # del socket solo hay un unico llamador de confianza.
+      ADS_TRUSTED_PROXY_HOPS: "0"
+    volumes:
+      # Provisionado por el instalador de Safent (`ADS_COMPANION_TLS_DIR`,
+      # ver .env.example): hoja TLS + clave, de solo lectura.
+      - ${ADS_COMPANION_TLS_DIR:?ADS_COMPANION_TLS_DIR requerido (directorio con leaf.crt/leaf.key)}:/etc/ads-companion/tls:ro
+    # Autochequeo dentro del propio contenedor: `127.0.0.1` es el mismo
+    # proceso (0.0.0.0 escucha tambien en loopback), asi que no cruza la
+    # regla `daddr`+`dport` del runtime. La hoja TLS esta emitida para
+    # `SAN DNS:ads.safent.internal`, no para `127.0.0.1` -- verificar aqui
+    # fallaria siempre por host, no por salud real. La cadena de confianza
+    # que SI importa (CA privada + huella + SAN) la aplica el propio
+    # runtime al conectarse desde fuera (`companions.py`,
+    # `NODE_EXTRA_CA_CERTS`), no este healthcheck de liveness local.
+    healthcheck:
+      # CMD-SHELL en una linea (ver compose.yaml): `podman compose` rompe la forma lista.
+      test: ["CMD-SHELL", "python -c \"import ssl, urllib.request; ctx = ssl._create_unverified_context(); urllib.request.urlopen( 'https://127.0.0.1:8443/api/v1/health', timeout=3, context=ctx)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

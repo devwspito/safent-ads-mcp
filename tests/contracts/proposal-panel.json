@@ -1,0 +1,116 @@
+{
+  "inbox": {
+    "lens": "urgency",
+    "pending_count": 1,
+    "deferred_count": 0,
+    "total_impact": {
+      "amount": 310,
+      "currency": "EUR"
+    },
+    "next_expiring_at": "2026-09-12T10:00:00+00:00",
+    "attention_budget": null,
+    "next_cursor": null,
+    "groups": [
+      {
+        "group_kind": "cause",
+        "cause_key": "recommended:cost_per_lead_high:M05:meta:campaign:panel-contract:EUR",
+        "cause": "CPL sobre objetivo en 7D",
+        "count": 1,
+        "total_impact": {
+          "amount": 310,
+          "currency": "EUR"
+        },
+        "batch_eligible": false,
+        "closes_at": null,
+        "proposals": [
+          {
+            "item_kind": "proposal",
+            "action_kind": "update",
+            "proposal_id": "10000000-0000-4000-8000-000000000001",
+            "proposed_by": null,
+            "entity_ref": "meta:campaign:panel-contract",
+            "entity_name": "Campana de contrato",
+            "platform": "meta",
+            "diff": {
+              "parametro": "daily_budget",
+              "valor_actual": 100,
+              "valor_propuesto": 70,
+              "diff_hash": "c623f8f29cf3cfcc80404b50e1efcba10239203de218466bb4d5dfddec1d870d",
+              "currency": "EUR"
+            },
+            "classification": "routine",
+            "urgency": "recommended",
+            "risk_level": "low",
+            "requires_expansion": false,
+            "requires_typed_confirmation": false,
+            "estimated_impact": {
+              "amount": 310,
+              "currency": "EUR"
+            },
+            "cause": "CPL sobre objetivo en 7D",
+            "expires_at": "2026-09-12T10:00:00+00:00",
+            "postponed_until": null,
+            "state": "pending"
+          }
+        ]
+      }
+    ]
+  },
+  "detail": {
+    "item_kind": "proposal",
+    "action_kind": "update",
+    "creation_plan": null,
+    "creation_plan_error": null,
+    "execution_id": null,
+    "proposal_id": "10000000-0000-4000-8000-000000000001",
+    "proposed_by": null,
+    "entity_ref": "meta:campaign:panel-contract",
+    "entity_name": "Campana de contrato",
+    "platform": "meta",
+    "diff": {
+      "parametro": "daily_budget",
+      "valor_actual": 100,
+      "valor_propuesto": 70,
+      "diff_hash": "c623f8f29cf3cfcc80404b50e1efcba10239203de218466bb4d5dfddec1d870d",
+      "currency": "EUR"
+    },
+    "classification": "routine",
+    "urgency": "recommended",
+    "risk_level": "low",
+    "requires_expansion": false,
+    "requires_typed_confirmation": false,
+    "estimated_impact": {
+      "amount": 310,
+      "currency": "EUR"
+    },
+    "cause": "CPL sobre objetivo en 7D",
+    "expires_at": "2026-09-12T10:00:00+00:00",
+    "postponed_until": null,
+    "state": "pending",
+    "cause_key": "cost_per_lead_high:M05:meta:campaign:panel-contract",
+    "signal_id": null,
+    "signal": null,
+    "rule_id": "M05",
+    "rule_code": "M05",
+    "rule_hit_rate_pct": null,
+    "rule_hit_rate_sample": 0,
+    "data_window": "7D",
+    "data_age_minutes": null,
+    "estimated_impact_range": null,
+    "evidence": [
+      {
+        "metric": "cpl",
+        "unit": null,
+        "actual": 41.2,
+        "target": 28,
+        "window": "7D",
+        "data_age_minutes": null,
+        "series": []
+      }
+    ],
+    "guardrail_verdicts": [],
+    "entity_history": [],
+    "owner_context": null,
+    "platform_url": null
+  }
+}

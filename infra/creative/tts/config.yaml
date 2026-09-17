@@ -1,0 +1,40 @@
+# ads-creative-tts config — Chatterbox-TTS-Server, Spanish VO defaults.
+# Bind-mounted read-only into the container (see compose.yaml). Auth stays
+# off because the port is bound to 127.0.0.1 only (least-privilege via
+# network isolation, not an app-level password worth maintaining for a local
+# worker with no internet exposure).
+server:
+  host: 0.0.0.0
+  port: 8004
+  use_ngrok: false
+  use_auth: false
+  log_file_path: logs/tts_server.log
+  log_file_max_size_mb: 10
+  log_file_backup_count: 5
+model:
+  repo_id: ResembleAI/chatterbox-multilingual-es-es
+tts_engine:
+  device: auto
+  predefined_voices_path: voices
+  reference_audio_path: reference_audio
+  default_voice_id: ""
+paths:
+  model_cache: model_cache
+  output: outputs
+generation_defaults:
+  temperature: 0.8
+  exaggeration: 1.0
+  cfg_weight: 0.5
+  seed: 0
+  speed_factor: 1.0
+  language: es
+audio_output:
+  format: wav
+  sample_rate: 24000
+  max_reference_duration_sec: 30
+  save_to_disk: true
+ui:
+  title: ads-creative-tts
+  show_language_select: true
+debug:
+  save_intermediate_audio: false

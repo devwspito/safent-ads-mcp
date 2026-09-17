@@ -1,0 +1,92 @@
+.bar {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .bar {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    flex-shrink: 0;
+    border-top: 1px solid var(--border-subtle);
+    background: var(--color-bg-translucent);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  @supports not (backdrop-filter: blur(1px)) {
+    .bar {
+      background: var(--bg-surface);
+    }
+  }
+}
+
+.tab {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 52px;
+  padding: 6px 4px;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+}
+
+.tabActive {
+  color: var(--color-accent-text);
+  font-weight: var(--fw-bold);
+}
+
+.tabActive::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 30%;
+  right: 30%;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+}
+
+.iconWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.count {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: var(--radius-full);
+  background: var(--bg-sunken);
+  color: var(--text-secondary);
+  font-size: 9px;
+  font-weight: var(--fw-bold);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dot {
+  position: absolute;
+  top: -2px;
+  right: -6px;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+}
+
+.dotRed {
+  background: var(--danger-solid);
+}
+
+.dotAmber {
+  background: var(--st-obsoleto-line);
+}

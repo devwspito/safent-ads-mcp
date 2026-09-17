@@ -1,0 +1,56 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.track {
+  position: relative;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--bg-sunken);
+  overflow: visible;
+}
+
+.healthyZone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--seq-2);
+  border-radius: var(--radius-full);
+}
+
+.target {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  background: var(--chart-target);
+}
+
+.marker {
+  position: absolute;
+  top: -3px;
+  width: 10px;
+  height: 14px;
+  border-radius: var(--radius-sm);
+  transform: translateX(-50%);
+}
+
+.markerLow {
+  background: var(--div-2);
+}
+
+.markerHealthy {
+  background: var(--seq-4);
+}
+
+.markerHigh {
+  background: var(--div-6);
+}
+
+.readout {
+  font-size: var(--fs-2xs);
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}

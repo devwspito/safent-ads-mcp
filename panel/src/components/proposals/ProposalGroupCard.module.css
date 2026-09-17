@@ -1,0 +1,260 @@
+.card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin-bottom: var(--sp-3);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--row-comfortable);
+  padding: 10px var(--sp-3);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.cause {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.batchButton {
+  min-height: 32px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--primary-700);
+  border-radius: var(--radius-sm);
+  background: var(--primary-700);
+  color: var(--on-primary);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.batchButton:disabled {
+  /* Nunca "gris fantasma" (panel-interaction-spec.md §2.3): mismo par compatible que Aprobar. */
+  cursor: not-allowed;
+  background: var(--bg-sunken);
+  border-color: var(--bg-sunken);
+  color: var(--text-tertiary);
+  opacity: 1;
+}
+
+.batchButtonSecondary {
+  min-height: 32px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 72px;
+  padding: 12px var(--sp-3);
+  border-top: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--border-default);
+}
+.card > .row:first-child {
+  border-top: none;
+}
+
+.rowCritical {
+  border-left-color: var(--sig-salir-line);
+}
+
+.rowRecommended {
+  border-left-color: var(--sig-bajar-line);
+}
+
+.rowFocused {
+  background: var(--bg-selected);
+}
+
+.content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.what {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.where {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entityName {
+  font-weight: var(--fw-medium);
+}
+
+.why {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+}
+
+.money {
+  min-width: 96px;
+  text-align: right;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.secondaryRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.approveButton {
+  min-height: 36px;
+  min-width: 84px;
+  padding: 0 var(--sp-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--primary-700);
+  color: var(--on-primary);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  transition: transform 80ms ease, background-color 80ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .approveButton:hover:not(:disabled) {
+    background: var(--primary-600);
+  }
+}
+
+.approveButton:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.approveButton:disabled {
+  /* Nunca "gris fantasma": bg-sunken/text-tertiary ya cumple 4.5:1 por sí solo
+     (panel-interaction-spec.md §2.3) — opacity:1 explícito porque `button:disabled`
+     global.css pone .58, que rebajaría este par por debajo del mínimo. */
+  cursor: not-allowed;
+  background: var(--bg-sunken);
+  color: var(--text-tertiary);
+  opacity: 1;
+}
+
+.disabledReason {
+  font-size: var(--fs-2xs);
+  color: var(--text-secondary);
+  text-align: right;
+  max-width: 160px;
+}
+
+.rejectButton {
+  min-height: 32px;
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  /* Danger solo al pasar el ratón — en reposo es un botón neutro, no una amenaza (Emil review). */
+  .rejectButton:hover:not(:disabled) {
+    border-color: var(--color-danger-line);
+    color: var(--color-danger-text);
+    background: var(--color-danger-fill);
+  }
+}
+
+.rejectButton:disabled {
+  cursor: not-allowed;
+  color: var(--text-tertiary);
+  opacity: 1;
+}
+
+.detailToggle {
+  background: none;
+  border: none;
+  color: var(--text-link);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+@media (max-width: 900px) {
+  /* Dos columnas: contenido y dinero comparten la fila 1 (orden del DOM), acciones ocupa toda la fila 2 debajo. */
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .actions {
+    grid-column: 1 / -1;
+    align-items: stretch;
+  }
+  .secondaryRow {
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 560px) {
+  /* Una columna: el orden del DOM ya es qué → dinero → acciones, sin posicionar celdas a mano. */
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .money {
+    text-align: left;
+  }
+  .secondaryRow {
+    flex: 1;
+  }
+  .rejectButton {
+    flex: 1;
+    min-height: 44px;
+  }
+  .approveButton {
+    min-height: 44px;
+  }
+  .header {
+    flex-wrap: wrap;
+  }
+  .cause {
+    flex-basis: 100%;
+    white-space: normal;
+  }
+}

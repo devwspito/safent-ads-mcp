@@ -1,0 +1,189 @@
+{
+  "1": {
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load LTX-2.5 Checkpoint (distilled)",
+      "note": "GUESSED FILENAME. Lightricks/LTX-2.5 is a gated HF repo (auto-gated) — we could not inspect its file listing without an HF_TOKEN with the license accepted, so this name follows the LTX-2.3 convention (ltx-2.3-22b-distilled-1.1.safetensors) rather than a confirmed 2.5 filename. Correct this once models/download.sh --with-ltx has actually pulled the repo — check `ls $ADS_CREATIVE_MODELS_ROOT/ltx-2.5/` and update."
+    },
+    "inputs": { "ckpt_name": "ltx-2.5-distilled.safetensors" }
+  },
+  "2": {
+    "class_type": "LTXAVTextEncoderLoader",
+    "_meta": {
+      "title": "Load Gemma Text Encoder",
+      "note": "Node name/inputs confirmed by decoding the official example workflow shipped in Lightricks/ComfyUI-LTXVideo (example_workflows/2.3/LTX-2.3_T2V_I2V_Single_Stage_Distilled_Full.json). Its CLIP-typed output feeds a plain CLIPTextEncode below — same as any other ComfyUI CLIP loader."
+    },
+    "inputs": {
+      "text_encoder_name": "gemma_3_12B_it_fp8_scaled.safetensors",
+      "ckpt_name": "ltx-2.5-distilled.safetensors",
+      "device": "default"
+    }
+  },
+  "3": {
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "CLIP Text Encode (Positive Prompt)" },
+    "inputs": {
+      "text": "{{prompt}}",
+      "clip": ["2", 0]
+    }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "CLIP Text Encode (Negative Prompt)" },
+    "inputs": {
+      "text": "worst quality, blurry, distorted, static image, frozen, low motion, watermark",
+      "clip": ["2", 0]
+    }
+  },
+  "5": {
+    "class_type": "LTXVConditioning",
+    "_meta": { "title": "LTXV Conditioning (frame rate)" },
+    "inputs": {
+      "positive": ["3", 0],
+      "negative": ["4", 0],
+      "frame_rate": 24.0
+    }
+  },
+  "6": {
+    "class_type": "LoadImage",
+    "_meta": { "title": "Load Image" },
+    "inputs": { "image": "{{image}}" }
+  },
+  "7": {
+    "class_type": "LTXVPreprocess",
+    "_meta": {
+      "title": "LTXV Preprocess",
+      "note": "Dropped the ResizeImageMaskNode 'scale longer dimension' pre-step present in the official example — simplification, not verified as safe to omit. If output quality suffers, insert a resize-to-{{width}}x{{height}} step here before preprocess."
+    },
+    "inputs": {
+      "image": ["6", 0],
+      "img_compression": 18
+    }
+  },
+  "8": {
+    "class_type": "EmptyLTXVLatentVideo",
+    "_meta": {
+      "title": "Empty LTXV Latent Video (9:16, 5s @ 24fps)",
+      "note": "121 frames / 24fps = 5.04s, matching the official example's frame count (a valid VAE-stride length: 8*15+1). width/height default to 576x1024 (exact 9:16, both multiples of 32 — LTX's VAE spatial stride) when {{width}}/{{height}} aren't substituted with something else."
+    },
+    "inputs": {
+      "width": "{{width}}",
+      "height": "{{height}}",
+      "length": 121,
+      "batch_size": 1
+    }
+  },
+  "9": {
+    "class_type": "LTXVImgToVideoConditionOnly",
+    "_meta": { "title": "LTXV Img-to-Video Condition" },
+    "inputs": {
+      "vae": ["1", 2],
+      "image": ["7", 0],
+      "latent": ["8", 0],
+      "strength": 0.7,
+      "bypass": false
+    }
+  },
+  "10": {
+    "class_type": "LTXVEmptyLatentAudio",
+    "_meta": {
+      "title": "Empty Audio Latent",
+      "note": "LTX-2.x is a joint audio/video model — sampling requires a concatenated AV latent even when audio output is discarded (see LTXVConcatAVLatent below). Widget values [97, 25, 1] mirrored as-is from the official example; exact parameter meaning (frames / sample-rate-divisor / batch?) not independently confirmed — this node has no documented standalone spec outside that example file."
+    },
+    "inputs": { "length": 97, "sample_rate_divisor": 25, "batch_size": 1 }
+  },
+  "11": {
+    "class_type": "LTXVConcatAVLatent",
+    "_meta": { "title": "Concat Audio+Video Latent" },
+    "inputs": {
+      "video_latent": ["9", 0],
+      "audio_latent": ["10", 0]
+    }
+  },
+  "12": {
+    "class_type": "LTXVScheduler",
+    "_meta": { "title": "LTXV Scheduler (distilled, 15 steps)" },
+    "inputs": {
+      "latent": ["11", 0],
+      "steps": 15,
+      "max_shift": 2.05,
+      "base_shift": 0.95,
+      "stretch": true,
+      "terminal": 0.1
+    }
+  },
+  "13": {
+    "class_type": "KSamplerSelect",
+    "_meta": { "title": "KSampler Select" },
+    "inputs": { "sampler_name": "euler_ancestral_cfg_pp" }
+  },
+  "14": {
+    "class_type": "RandomNoise",
+    "_meta": { "title": "Random Noise" },
+    "inputs": { "noise_seed": "{{seed}}" }
+  },
+  "15": {
+    "class_type": "CFGGuider",
+    "_meta": {
+      "title": "CFG Guider",
+      "note": "Chose this simpler branch over the official example's alternate MultimodalGuider+GuiderParameters(AUDIO/VIDEO) path — that path needs two more custom nodes we did not verify are bundled/stable, for a benefit (per-modality CFG weighting) this single-output silent-video use case doesn't need. cfg=1 matches the distilled model's official example value."
+    },
+    "inputs": {
+      "model": ["1", 0],
+      "positive": ["5", 0],
+      "negative": ["5", 1],
+      "cfg": 1.0
+    }
+  },
+  "16": {
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": { "title": "SamplerCustomAdvanced" },
+    "inputs": {
+      "noise": ["14", 0],
+      "guider": ["15", 0],
+      "sampler": ["13", 0],
+      "sigmas": ["12", 0],
+      "latent_image": ["11", 0]
+    }
+  },
+  "17": {
+    "class_type": "LTXVSeparateAVLatent",
+    "_meta": { "title": "Separate Audio/Video Latent" },
+    "inputs": { "av_latent": ["16", 0] }
+  },
+  "18": {
+    "class_type": "LTXVTiledVAEDecode",
+    "_meta": { "title": "LTXV Tiled VAE Decode (video)" },
+    "inputs": {
+      "vae": ["1", 2],
+      "latents": ["17", 0],
+      "tile_size": 2,
+      "overlap": 2,
+      "temporal_size": 6,
+      "temporal_overlap": false,
+      "vae_dtype": "auto",
+      "vae_device": "auto"
+    }
+  },
+  "19": {
+    "class_type": "CreateVideo",
+    "_meta": {
+      "title": "Create Video",
+      "note": "Audio branch (LTXVAudioVAEDecode on node 17's audio_latent output) intentionally not wired in — silent 9:16 clip only, per the task scope. If CreateVideo's `audio` input turns out to be required (not optional) rather than nullable, add LTXVAudioVAEDecode(samples=[17,1], audio_vae=[1,2]) and wire its output here."
+    },
+    "inputs": {
+      "images": ["18", 0],
+      "fps": 24.0
+    }
+  },
+  "20": {
+    "class_type": "SaveVideo",
+    "_meta": { "title": "Save Video" },
+    "inputs": {
+      "video": ["19", 0],
+      "filename_prefix": "ads-creative-ltx",
+      "format": "auto",
+      "codec": "auto"
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "portfolio_row": {
+    "entity_ref": "google:campaign:1234567890",
+    "name": "Synthetic campaign",
+    "platform": "google",
+    "platform_account_id": "google:account:22222222-2222-2222-2222-222222222222",
+    "platform_account_uuid": "22222222-2222-2222-2222-222222222222",
+    "status": "PAUSED",
+    "currency": "EUR",
+    "budget": {"amount": 10.0, "currency": "EUR"},
+    "spend": {"amount": 0.0, "currency": "EUR"},
+    "cost_per_lead": null,
+    "signal": {"kind": "HOLD", "strength": 25, "cause": "Synthetic evidence"},
+    "money_at_stake": {"amount": 0.0, "currency": "EUR"},
+    "is_controllable": true,
+    "learning_state": {"is_learning": false, "reason": null, "since": null},
+    "spend_14d": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    "is_degraded": false
+  },
+  "signal_row": {
+    "signal_id": "33333333-3333-3333-3333-333333333333",
+    "business_id": "11111111-1111-1111-1111-111111111111",
+    "entity_ref": "google:campaign:1234567890",
+    "entity_name": "google:campaign:1234567890",
+    "platform": "google",
+    "kind": "HOLD",
+    "strength": 25,
+    "cause": "Synthetic evidence",
+    "money_at_stake": {"amount": 0.0, "currency": "EUR"},
+    "data_window": "7D",
+    "action_taken": "none",
+    "proposal_id": null,
+    "emitted_at": "2026-09-14T09:00:00+00:00",
+    "outcome": {"status": "not_applicable", "days_remaining": null, "evaluated_at": null}
+  }
+}

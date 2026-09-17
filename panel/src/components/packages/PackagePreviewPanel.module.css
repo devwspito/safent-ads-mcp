@@ -1,0 +1,166 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-4);
+  background: var(--bg-sunken);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.notApprovable {
+  margin: 0 0 var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--st-degradado-fill);
+  color: var(--st-degradado-text);
+  font-size: var(--fs-xs);
+}
+
+.channelSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--sp-2) 0 var(--sp-3);
+}
+
+.channelChip {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  height: 22px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-default);
+  color: var(--text-primary);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+}
+
+.channelLine {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.channelNote {
+  margin: 0;
+  font-size: var(--fs-2xs);
+  color: var(--text-tertiary);
+}
+
+.nodeLabel {
+  font-weight: var(--fw-medium);
+  color: var(--text-tertiary);
+}
+
+.section {
+  padding: var(--sp-3) 0;
+}
+
+.section + .section {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.sectionHeading {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.adSetBlock + .adSetBlock {
+  margin-top: var(--sp-4);
+}
+
+.adSetName {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--text-secondary);
+}
+
+.adGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  gap: var(--sp-4);
+}
+
+@media (max-width: 760px) {
+  .adGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.audienceBlock {
+  padding: var(--sp-2) 0;
+}
+
+.audienceBlock + .audienceBlock {
+  border-top: 1px solid var(--border-subtle);
+}
+
+.audienceGroupName {
+  margin: 0 0 4px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+}
+
+.audienceLine {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.audienceNote {
+  margin: 2px 0 0;
+  font-size: var(--fs-2xs);
+  color: var(--text-tertiary);
+}
+
+.approveSentence {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}
+
+.undoSentence {
+  margin: var(--sp-1) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+}
+
+.nativeSummary {
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.nativeSummary summary {
+  cursor: pointer;
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+}
+
+.nativeSummaryList {
+  margin: var(--sp-2) 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nativeSummaryList div {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.nativeSummaryList dt {
+  color: var(--text-tertiary);
+  min-width: 160px;
+}
+
+.nativeSummaryList dd {
+  margin: 0;
+  color: var(--text-secondary);
+}

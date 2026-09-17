@@ -1,0 +1,67 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--sp-4);
+}
+
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.accountLabel {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.questionLabel {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.questionRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.questionInput {
+  flex: 1;
+  height: 34px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 0 var(--sp-3);
+  font-size: var(--fs-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.confirmButton {
+  height: 30px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--primary-700);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.confirmButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -1,0 +1,25 @@
+.thumb {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  flex-shrink: 0;
+}
+
+.fallback {
+  width: 96px;
+  height: 96px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--sp-2);
+  border: 1px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  color: var(--text-tertiary);
+  font-size: var(--fs-2xs);
+  flex-shrink: 0;
+}

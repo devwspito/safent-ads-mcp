@@ -1,0 +1,315 @@
+# safent-ads — plan.md §9 (Despliegue). ads-api/ads-worker/ads-broker
+# comparten una sola imagen (Containerfile); lo que cambia entre ellos es
+# `command`, `user` y que secretos monta cada uno. Ningun secreto vive aqui:
+# `.env` (raiz, fuera de git) trae solo configuracion NO secreta para la
+# sustitucion `${VAR}` de compose; los secretos de aplicacion llegan por
+# `secrets/api.env` (ads-api/ads-worker) y `secrets/broker.env` (ads-broker)
+# via `env_file:`, cada uno visible solo para su servicio (T066,
+# threat-model.md C-24). Ver secrets/*.env.example y config/caps.example.yaml.
+
+name: safent-ads
+
+# Solo configuracion NO secreta, compartida por ads-api y ads-worker
+# (CommonSettings en composition/settings.py). Nunca POSTGRES_* (solo
+# ads-db la necesita) ni credenciales de plataforma (solo ads-broker).
+x-ads-app-env: &ads-app-env
+  ADS_DATABASE_URL: ${ADS_DATABASE_URL}
+  ADS_BROKER_SOCKET: ${ADS_BROKER_SOCKET}
+  ADS_PUBLIC_BASE_URL: ${ADS_PUBLIC_BASE_URL}
+  ADS_TZ: ${ADS_TZ:-Europe/Madrid}
+  ADS_ACTIVE_HOURS: ${ADS_ACTIVE_HOURS:-08:00-21:00}
+
+# Secretos de ads-api/ads-worker (ADS_APPROVAL_SIGNING_KEY, ADS_SESSION_SECRET,
+# ADS_TOTP_ENC_KEY, ADS_MCP_TOKEN, TELEGRAM_*, respaldo cloud de creatividad).
+# `required: false`: en un checkout nuevo `secrets/api.env` no existe
+# todavia -- `docker compose config`/`up` no deben fallar por eso; el fallo
+# correcto es `ApiSettings()`/`WorkerSettings()` rechazando por campos
+# obligatorios ausentes (fail loud a nivel de aplicacion, no de compose;
+# mismo patron que `secrets/broker.env` mas abajo).
+x-ads-api-secrets: &ads-api-secrets
+  - path: secrets/api.env
+    required: false
+
+networks:
+  # Una unica red interna de compose para los cuatro servicios propios: sin
+  # `internal: true` a proposito -- ads-api necesita salir a Telegram y
+  # ads-broker a Google/Meta (cada uno tras su propia lista blanca de
+  # egreso en la aplicacion, egress_guard.py). "Interna" aqui significa
+  # "sin puerto publicado salvo ads-api:8410 en loopback", no "sin
+  # internet"; `internal: true` cortaria ambas integraciones.
+  ads-net:
+    name: safent-ads-net
+
+services:
+  ads-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    networks:
+      - ads-net
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER requerido}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerido}
+      POSTGRES_DB: ${POSTGRES_DB:-ads}
+    volumes:
+      - ads-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ads} -d ${POSTGRES_DB:-ads}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    # Placeholders razonables para una sola instancia de negocio; medir y
+    # ajustar antes de meter varios negocios en el mismo Postgres.
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  # Migraciones como paso explicito de una sola vez: ni ads-api ni ads-worker
+  # arrancan hasta que `alembic upgrade head` termina bien (verificacion fresca
+  # T214: sin este paso la BD nueva no tenia alembic_version y el worker
+  # fallaba cada ciclo). Una replica, sin carrera.
+  ads-migrate:
+    image: safent-ads:local
+    user: "10001:10001"
+    command: alembic upgrade head
+    environment: *ads-app-env
+    networks:
+      - ads-net
+    depends_on:
+      ads-db:
+        condition: service_healthy
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  ads-api:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: safent-ads:local
+    restart: unless-stopped
+    user: "10001:10001"
+    # ads-broker-clients (gid 10003, Containerfile): sin esto `user: uid:gid`
+    # deja fuera los grupos suplementarios y el connect() al socket del
+    # broker falla con EACCES antes de llegar a SO_PEERCRED.
+    group_add:
+      - "10003"
+    # `composition/app.py:main()` elige host/puerto/TLS por si mismo
+    # (127.0.0.1:8410 en claro salvo `ADS_COMPANION_MODE=true`, ver
+    # `compose.companion.yaml`).
+    command: python -m safent_ads.composition.app
+    environment:
+      <<: *ads-app-env
+      # Dentro del contenedor hay que escuchar en todas las interfaces; el host
+      # solo publica 127.0.0.1:8410 (ver ports). En companion mode se ignora.
+      ADS_BIND_HOST: "0.0.0.0"
+    env_file: *ads-api-secrets
+    networks:
+      - ads-net
+    ports:
+      - "127.0.0.1:8410:8410"
+    volumes:
+      - broker-sock:/run/ads-broker
+    depends_on:
+      ads-db:
+        condition: service_healthy
+      ads-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      # CMD-SHELL en una linea: `podman compose` parte los argumentos con espacios
+      # de la forma lista y deja el servicio permanentemente `unhealthy`.
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8410/api/v1/health', timeout=3)\""]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      # Revisión de seguridad F2/F3: ads-api también ejecuta acciones defensivas
+      # (apply_defensive_action) → una sola réplica, igual que ads-worker.
+      replicas: 1
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  ads-worker:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: safent-ads:local
+    restart: unless-stopped
+    user: "10001:10001"
+    group_add:
+      - "10003"
+    command: python -m safent_ads.composition.worker
+    environment: *ads-app-env
+    env_file: *ads-api-secrets
+    networks:
+      - ads-net
+    volumes:
+      - broker-sock:/run/ads-broker
+    depends_on:
+      ads-db:
+        condition: service_healthy
+      ads-migrate:
+        condition: service_completed_successfully
+    # threat-model.md C-15/C-17, security review F2/F3 nit 4: NO hay lock
+    # por cuenta/ledger dentro de `_pass_gates` todavia -- dos workers
+    # claiming distintos intentos sobre la MISMA entidad leerian el mismo
+    # snapshot de `spend_ledger` en transacciones separadas y ambos
+    # pasarian el tope diario. Hasta que ese lock de guardarraíl aterrice,
+    # "un solo worker" es un invariante de seguridad, no una eleccion de
+    # capacidad -- no subir este numero. `composition/worker.py` ademas se
+    # niega a arrancar ciclos si otro proceso ya tiene el advisory lock de
+    # Postgres (`SingleWorkerLock`), como red de seguridad si algo fuera de
+    # compose (escalado manual, un segundo despliegue) lo incumple.
+    # F0: sin ciclos de orquestacion todavia (composition/worker.py solo
+    # espera SIGTERM/SIGINT), asi que no hay un endpoint de negocio real que
+    # comprobar. Esto solo verifica que el interprete y el paquete instalado
+    # siguen intactos (canario de despliegue roto, no liveness de negocio).
+    # Sustituir por una comprobacion de heartbeat de `orchestration/` en
+    # cuanto F1 meta los ciclos (plan.md §7) -- seam documentado, no
+    # implementado aqui: tocar composition/worker.py es fuera del alcance
+    # de este cambio (T066 es solo ops).
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import safent_ads"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    deploy:
+      replicas: 1
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+  ads-broker:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: safent-ads:local
+    restart: unless-stopped
+    user: "10002:10002"
+    # Necesario para poder chgrp el socket a ads-broker-clients al arrancar
+    # (composition/broker.py): sin ser miembro del grupo destino, chown()
+    # sin CAP_CHOWN devuelve EPERM.
+    group_add:
+      - "10003"
+    read_only: true
+    networks:
+      - ads-net
+    command: python -m safent_ads.composition.broker
+    # `required: false`: en un checkout nuevo `secrets/broker.env` no existe
+    # todavia (quickstart.md §1). `docker compose config`/`up` no deben
+    # fallar por eso; el fallo correcto es `BrokerSettings()` rechazando por
+    # campos obligatorios ausentes (fail loud a nivel de aplicacion, no de
+    # compose).
+    env_file:
+      - path: secrets/broker.env
+        required: false
+    volumes:
+      - broker-sock:/run/ads-broker
+      # `credential_store.py::EncryptedCredentialStore` mkdir's
+      # ADS_CREDENTIAL_STORE_DIR (secrets/broker.env.example default:
+      # /var/lib/ads-broker/credentials) on every boot. `read_only: true`
+      # above makes the whole container filesystem read-only except
+      # explicit volumes/tmpfs -- without this one, ads-broker crashed with
+      # OSError: Read-only file system on every start, and the encrypted
+      # client credentials (Google/Meta tokens) it holds must survive
+      # restarts, so this has to be a real named volume, never tmpfs.
+      - credential-store:/var/lib/ads-broker
+      - type: bind
+        # T066: topes duros fuera de secrets/ (no es una credencial, es
+        # configuracion operativa) pero igualmente inalcanzable para
+        # ads-api/ads-worker -- ningun otro servicio monta este fichero.
+        # El operador debe fijar `chown root:root config/caps.yaml` en el
+        # host (README "Operacion"); `read_only` aqui + `read_only: true`
+        # de todo el contenedor ya impiden la escritura desde dentro.
+        source: ./config/caps.yaml
+        target: /etc/ads-broker/caps.yaml
+        read_only: true
+        bind:
+          create_host_path: false
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Exercita el listener real del socket Unix (conexion a nivel de
+    # transporte). Una vuelta completa del protocolo tipado
+    # (wire_protocol.py) queda para tools/broker_probe.py una vez el
+    # dispatcher tenga mas que DENY -- reimplementar el framing aqui
+    # duplicaria logica que ya es responsabilidad de broker/presentation/.
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - >-
+          import socket;
+          s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM);
+          s.settimeout(3);
+          s.connect('/run/ads-broker/broker.sock')
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+  # Perfil opcional (F4): motor local de creatividades en la DGX. La
+  # definicion real (build, GPU, volumenes de modelos) vive en
+  # infra/creative/comfyui/compose.yaml — este servicio es solo el enganche
+  # para levantarlo con `docker compose --profile creative-local up`, no una
+  # segunda fuente de verdad.
+  comfyui:
+    image: ads-creative-comfyui:local
+    profiles: ["creative-local"]
+    restart: unless-stopped
+    networks:
+      - ads-net
+    ports:
+      - "127.0.0.1:8188:8188"
+
+volumes:
+  ads-db-data:
+    name: safent-ads-db-data
+  broker-sock:
+    name: safent-ads-broker-sock
+  credential-store:
+    name: safent-ads-credential-store

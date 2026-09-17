@@ -1,0 +1,195 @@
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: 72px;
+  padding: 12px var(--sp-3);
+  border-top: 1px solid var(--border-subtle);
+}
+.group > .row:first-child {
+  border-top: none;
+}
+
+.content {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.name {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.where {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.statusChip {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 var(--sp-1);
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+}
+
+.statusActive {
+  color: var(--color-success-text);
+  border-color: var(--color-success-line);
+  background: var(--color-success-fill);
+}
+
+.statusPaused {
+  color: var(--color-warning-text);
+  border-color: var(--color-warning-line);
+  background: var(--color-warning-fill);
+}
+
+.statusRemoved {
+  color: var(--color-neutral-text);
+  border-color: var(--color-neutral-line);
+  background: var(--color-neutral-fill);
+}
+
+.warning {
+  font-size: var(--fs-xs);
+  color: var(--text-tertiary);
+}
+
+.figures {
+  min-width: 96px;
+  text-align: right;
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.figureSep {
+  color: var(--text-tertiary);
+  margin: 0 4px;
+}
+
+.missing {
+  font-size: var(--fs-2xs);
+  color: var(--text-tertiary);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.secondaryRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.primaryButton {
+  min-height: 36px;
+  min-width: 92px;
+  padding: 0 var(--sp-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--primary-700);
+  color: var(--on-primary);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .primaryButton:hover:not(:disabled) {
+    background: var(--primary-600);
+  }
+}
+
+.primaryButton:disabled {
+  cursor: not-allowed;
+  background: var(--bg-sunken);
+  color: var(--text-tertiary);
+  opacity: 1;
+}
+
+.disabledReason {
+  font-size: var(--fs-2xs);
+  color: var(--text-secondary);
+  text-align: right;
+  max-width: 150px;
+}
+
+.detailToggle {
+  background: none;
+  border: none;
+  color: var(--text-link);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+@media (max-width: 900px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  /* Pausar/Reanudar y «⋯» comparten fila (design.md §4.6); el motivo y «Detalle»
+     se fuerzan a su propia línea con `order`, sin importar dónde caen en el DOM. */
+  .actions {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-2) 4px;
+  }
+  .primaryButton {
+    order: 1;
+    flex: 1;
+  }
+  .secondaryRow {
+    order: 2;
+    flex: 0 0 auto;
+  }
+  .disabledReason {
+    order: 3;
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .detailToggle {
+    order: 4;
+    flex-basis: 100%;
+    text-align: right;
+  }
+}
+
+@media (max-width: 560px) {
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .figures {
+    text-align: left;
+  }
+  .primaryButton {
+    min-height: 44px;
+  }
+}

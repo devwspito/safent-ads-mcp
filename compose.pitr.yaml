@@ -1,0 +1,47 @@
+# compose.pitr.yaml — PITR (Point-In-Time Recovery), OPT-IN (T125). NUNCA
+# se aplica solo -- se apila sobre `compose.yaml`, mismo patron que
+# `compose.companion.yaml`:
+#
+#   docker compose -f compose.yaml -f compose.pitr.yaml up -d ads-db
+#
+# Que resuelve: `make backup` (`ops/backup.sh`) solo captura el instante
+# exacto en que corre -- cualquier escritura entre dos backups se pierde
+# si hay que restaurar. Con WAL archiving encendido, un `pg_basebackup` (o
+# el ultimo `.dump`) mas los segmentos de `/wal-archive` permiten recuperar
+# hasta un segundo concreto entre dos backups (`recovery_target_time`),
+# no solo saltar al ultimo backup completo.
+#
+# Por que APAGADO por defecto: WAL sin purga es un disco que crece sin
+# limite si nadie lo poda -- esta rama (T125) entrega el INTERRUPTOR
+# documentado, no la politica de retencion/purga de `/wal-archive`
+# (T125 tasks.md solo pide "PITR note", no un pruning automatico). Quien
+# active este perfil asume vigilar `safent-ads-wal-archive` (tamano,
+# antiguedad) hasta que exista esa segunda pieza.
+#
+# `archive_command`: `test ! -f ... && cp` es la receta minima que
+# documenta la propia guia de Postgres para no pisar un segmento ya
+# archivado (Postgres puede reintentar el mismo segmento) -- no copia un
+# fichero de terceros, no depende de red ni de una CLI de nube.
+
+services:
+  ads-db:
+    command:
+      - postgres
+      - -c
+      - wal_level=replica
+      - -c
+      - archive_mode=on
+      - -c
+      - archive_command=test ! -f /wal-archive/%f && cp %p /wal-archive/%f
+      # T125 no fija una politica de purga: un intervalo generoso (5 min)
+      # para que la ventana de perdida entre WAL sea acotada incluso si la
+      # actividad de la base es baja, sin forzar un archive_command en
+      # cada commit.
+      - -c
+      - archive_timeout=300
+    volumes:
+      - wal-archive-data:/wal-archive
+
+volumes:
+  wal-archive-data:
+    name: safent-ads-wal-archive

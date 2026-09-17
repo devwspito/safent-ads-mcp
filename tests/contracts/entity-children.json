@@ -1,0 +1,20 @@
+{
+  "parent_ref": "google:campaign:1111111111",
+  "parent_name": "Búsqueda Marca",
+  "level": "ad",
+  "items": [{
+    "entity_ref": "google:campaign:1111111111:child",
+    "name": "Anuncio 1",
+    "level": "ad",
+    "status": "ACTIVE",
+    "spend_today": null,
+    "spend_window": null,
+    "conversions_by_kind": null,
+    "cost_per_lead": null,
+    "cost_per_business_conversion": null,
+    "signal": null,
+    "freshness": null,
+    "badges": [],
+    "has_children": false
+  }]
+}

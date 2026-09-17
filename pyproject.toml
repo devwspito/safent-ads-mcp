@@ -1,0 +1,163 @@
+[project]
+name = "safent-ads"
+version = "0.2.45"
+description = "Ecosistema publicitario Safent Ads: control central sobre Google Ads y Meta Ads con punto único de escritura."
+requires-python = ">=3.12,<3.13"
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+# No `apscheduler` dependency: the cadences in plan.md §7 are a fixed, known
+# set (15/60 min, hourly, 30 s, daily) and every cycle is already required to
+# be idempotent with no shared in-memory state, so a job store / misfire
+# policy buys nothing here. `croniter` (below) plus `asyncio` cover the cron
+# cadences; see src/safent_ads/composition/worker.py for the full rationale.
+dependencies = [
+  "fastapi>=0.141,<1",
+  "uvicorn[standard]>=0.52,<1",
+  "sqlalchemy[asyncio]>=2.0,<3",
+  "asyncpg>=0.31,<1",
+  "alembic>=1.19,<2",
+  "pydantic>=2.13,<3",
+  "pydantic-settings>=2.15,<3",
+  "structlog>=26.1,<27",
+  "aiogram>=3.31,<4",
+  "mcp>=2.2,<3",
+  "jsonschema>=4.25,<5",
+  "httpx2>=2.12,<3",
+  "google-ads>=32,<33",
+  "facebook-business>=26.0,<27",
+  "httpx>=0.28,<1",
+  "cryptography>=50.0,<51",
+  "pyotp>=2.10,<3",
+  "argon2-cffi>=25.1,<26",
+  "croniter>=6.2,<7",
+  "pyyaml>=6.0,<7",
+  # Perf (16-sep, item 3): `TLRUCache` (bounded, LRU eviction, per-key TTL)
+  # cachea las lecturas de referencia de Composio en
+  # `mcp/infrastructure/broker_reference_data_port.py`. Ya era transitiva
+  # via `pymc` -- se declara directa porque el codigo de produccion la
+  # importa.
+  "cachetools>=6.2,<7",
+  # T127: contador/histograma en proceso, sin servidor de metricas externo
+  # (Pushgateway/collector) -- registro por defecto + servidor HTTP propio
+  # en loopback (`observability/server.py`), suficiente para 3 procesos
+  # de una sola replica cada uno (ver compose.yaml).
+  "prometheus-client>=0.26,<1",
+  # --- lane: creative ---
+  "moviepy>=2.1,<3",
+  "pillow>=12.3,<13",
+  "playwright>=1.49,<2",
+  "jinja2>=3.1,<4",
+  "python-ulid>=3.1,<4",
+  # --- end lane: creative ---
+  # --- lane: profitability ---
+  # `BudgetOptimizer` + curvas Hill/adstock (profitability-engine.md §3/§7,
+  # research/reuse-bases.md B.1). Verificado en aarch64 (DGX) 2026-09-09:
+  # instala y `pymc_marketing.mmm.BudgetOptimizer` importa sin compilar
+  # nada (numpy/scipy/pytensor traen wheel aarch64). `optimization/infrastructure`
+  # lo importa perezosamente; si falla en otro entorno, el adaptador
+  # reporta `unavailable` y el dominio degrada al estimador tactico (§3).
+  "pymc-marketing>=1.1,<2",
+  # --- end lane: profitability ---
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=9.1,<10",
+  "pytest-asyncio>=1.4,<2",
+  "pytest-cov>=7.1,<8",
+  "testcontainers[postgres]>=4.15,<5",
+  "ruff>=0.16,<0.17",
+  "mypy>=2.3,<3",
+  "types-pyyaml>=6.0,<7",
+  "types-croniter>=6.2,<7",
+  "types-jsonschema>=4.25,<5",
+  "types-cachetools>=6.2,<7",
+  # T130 I-5: barrido de codigo muerto (revision final) -- no forma parte
+  # de `make lint`/`make type`, se invoca a mano (`uv run vulture src`).
+  "vulture>=2.16,<3",
+  "pytest-randomly>=3.15,<4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/safent_ads"]
+
+[tool.uv]
+package = true
+# moviepy 2.2 fija pillow<12 por precaución, pero pillow 11.3 arrastra 25
+# avisos de seguridad (pip-audit, PYSEC-2026-*). Se anula ese tope: la
+# composición de vídeo (MoviePyVideoComposer) se prueba con pillow 12 en
+# tests/unit/creative y tests/integration/creative.
+override-dependencies = ["pillow>=12.3,<13"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "S", "UP", "ARG", "PL"]
+# S101 (assert) is expected in tests; PLR2004 (magic value) is noisy for
+# threshold constants that already carry a named context; both are scoped
+# out per-file below rather than globally.
+ignore = ["PLR0913"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "PLR2004", "ARG001", "S106", "S108", "S311"]
+"alembic/**" = ["ARG001"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src"]
+plugins = []
+
+[[tool.mypy.overrides]]
+module = [
+  "google.ads.*",
+  "facebook_business.*",
+  "aiogram.*",
+  "moviepy.*",
+  "pymc_marketing.*",
+  "pymc.*",
+  "pytensor.*",
+  "pandas.*",
+  "arviz.*",
+]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+  "integration: requires external services (Postgres via testcontainers).",
+]
+# `pytest-randomly` (dev dependency, T035 security re-check 2026-09-15) stays
+# available for deliberate order-dependence audits (`uv run pytest -p randomly`)
+# but is OFF by default here: it already found a second, unrelated pre-existing
+# flake (`tests/unit/notifications/application/test_delivery.py`, structlog
+# global-config contamination) outside this fix's scope -- flipping `make
+# test`'s default order would make CI intermittently red for that, not for
+# anything this diff touches. `-p randomly` on the command line re-enables it
+# for an explicit audit run.
+addopts = "--strict-markers -p no:randomly"
+
+[tool.coverage.run]
+source = ["src/safent_ads"]
+
+[tool.coverage.report]
+# T121: medido con `uv run pytest --cov=safent_ads -m "not integration"`
+# (83 % en 2026-09-10) redondeado HACIA ABAJO al multiplo de 5 mas cercano
+# -- un margen deliberado para no fallar por fluctuaciones minimas de
+# recuento de lineas entre commits, mientras una caida real (que baje del
+# 80 %) sigue fallando la puerta. Wiring pendiente (fuera del alcance de
+# ficheros permitidos a este carril de QA, ver tasks.md T121): `make test`
+# hoy no invoca `--cov`, asi que este umbral solo se aplica cuando algo
+# corre pytest CON `--cov=safent_ads` (p. ej. a mano, o en cuanto
+# devops-engineer anada `--cov=safent_ads` al target `test` del Makefile/
+# `.github/workflows/ci.yml`).
+fail_under = 80

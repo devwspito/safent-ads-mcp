@@ -1,0 +1,36 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-2xs);
+  font-variant-numeric: tabular-nums;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+/* Débil (0–39): sin relleno, texto secundario */
+.weak {
+  background: transparent;
+  border-color: var(--border-default);
+  color: var(--text-secondary);
+}
+
+/* Media (40–69): relleno + borde */
+.medium {
+  border-width: 1px;
+}
+
+/* Fuerte (70–100): relleno + borde 1,5px + peso 650 */
+.strong {
+  border-width: 1.5px;
+  font-weight: var(--fw-bold);
+}
+
+.notAccionable {
+  border-style: dashed;
+  background: transparent;
+  color: var(--text-secondary);
+}

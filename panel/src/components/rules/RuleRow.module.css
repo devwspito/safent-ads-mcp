@@ -1,0 +1,106 @@
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: var(--row-comfortable);
+  padding: var(--sp-2) var(--sp-3);
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.name {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.nameText {
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+}
+
+.code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-2xs);
+  color: var(--text-tertiary);
+}
+
+.stat {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  min-width: 90px;
+}
+
+.magnitude {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.magnitudeInput {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  width: 56px;
+  height: 26px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 0 var(--sp-1);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.magnitudeInput[aria-invalid="true"] {
+  border-color: var(--st-freno-line);
+}
+
+.magnitudeError {
+  font-size: var(--fs-2xs);
+  color: var(--st-freno-text);
+}
+
+.switch {
+  display: inline-flex;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.switchOption {
+  height: 26px;
+  padding: 0 var(--sp-2);
+  border: none;
+  border-right: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--fs-2xs);
+  cursor: pointer;
+}
+
+.switchOption:last-child {
+  border-right: none;
+}
+
+.switchOptionActive {
+  background: var(--bg-selected);
+  color: var(--primary-700);
+  font-weight: var(--fw-medium);
+}
+
+.switchOption:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.approvalNote {
+  font-size: var(--fs-2xs);
+  color: var(--st-aprendizaje-text);
+}
+
+@media (max-width: 760px) {
+  .row { gap: var(--sp-2); padding-inline: 0; }
+  .name { flex-basis: 100%; min-width: 0; }
+  .switch { margin-left: auto; }
+}

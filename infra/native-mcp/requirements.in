@@ -1,0 +1,2 @@
+# Official Google Ads MCP, isolated from the Safent application environment.
+google-ads-mcp @ https://github.com/googleads/google-ads-mcp/archive/7a40eae9655194a84d5291c63af817bb20d02ea8.tar.gz

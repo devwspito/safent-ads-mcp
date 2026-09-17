@@ -1,0 +1,62 @@
+.banner {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  padding: var(--sp-2) var(--sp-4);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  border-bottom: 1px solid transparent;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  flex-shrink: 0;
+}
+
+.stale {
+  background: var(--st-obsoleto-fill);
+  color: var(--st-obsoleto-text);
+  border-color: var(--st-obsoleto-line);
+}
+.stale .dot {
+  background: var(--st-obsoleto-line);
+}
+
+.degraded {
+  background: var(--st-degradado-fill);
+  color: var(--st-degradado-text);
+  border-color: var(--st-degradado-line);
+}
+.degraded .dot {
+  background: var(--st-degradado-line);
+}
+
+.brake {
+  background: var(--st-freno-fill);
+  color: var(--st-freno-text);
+  border-color: var(--st-freno-line);
+}
+.brake .dot {
+  background: var(--st-freno-line);
+}
+
+.reason {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.action {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  border-radius: var(--radius-sm);
+  padding: var(--sp-1) var(--sp-3);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  flex-shrink: 0;
+}

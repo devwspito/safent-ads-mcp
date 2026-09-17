@@ -1,0 +1,199 @@
+# syntax=docker/dockerfile:1.7
+# =============================================================================
+# ads-creative-comfyui — ComfyUI for NVIDIA DGX Spark (GB10 Grace Blackwell,
+# aarch64, sm_121). CUDA 13 + PyTorch cu130 + SageAttention (source build for
+# sm_121a) + native support for Qwen-Image-2512, FLUX.2-klein-4B, Wan 2.2,
+# and Lightricks' own LTXVideo node pack for LTX-2.5.
+#
+# Base recipe verified against:
+#   - AEON-7/comfyui-aeon-spark (CUDA13 devel base, SageAttention v3 build,
+#     TORCH_CUDA_ARCH_LIST=12.1a, unified-memory runtime env)
+#   - Triplany/comfyui-dgx-spark (same stack, independent confirmation)
+# We deliberately trim their custom-node bundle to only what our four target
+# models need (SRP: this image serves ad-creative generation, not a general
+# ComfyUI kitchen sink) and drop ComfyUI-Manager (no runtime pull of unpinned
+# third-party code from inside a container nobody is babysitting — models and
+# nodes are supplied by our own IaC: models/download.sh + this Containerfile).
+# =============================================================================
+
+# Compile jobs are capped low on purpose. A prior AEON-7 build with wider
+# parallelism (~20-wide nvcc + FA2 in parallel) peaked ~100GB and OOM-crashed
+# the host. This box runs ~20 production containers already — cap the build
+# container's own memory too (see README.md "Build" section: `docker build
+# --memory=32g`).
+ARG BUILD_JOBS=4
+
+# -----------------------------------------------------------------------------
+# Stage 1: base — system deps, PyTorch cu130, common tooling
+# -----------------------------------------------------------------------------
+FROM nvidia/cuda:13.0.2-devel-ubuntu24.04 AS base
+
+ARG BUILD_JOBS
+ENV DEBIAN_FRONTEND=noninteractive
+ENV MAX_JOBS=${BUILD_JOBS}
+ENV CMAKE_BUILD_PARALLEL_LEVEL=${BUILD_JOBS}
+ENV NINJAFLAGS="-j${BUILD_JOBS}"
+ENV MAKEFLAGS="-j${BUILD_JOBS}"
+
+# DGX Spark GB10 = compute capability 12.1a (Blackwell datacenter variant).
+# CUDA 13 nvcc supports sm_121 directly; 12.1a unlocks per-SM tensor core paths.
+ENV TORCH_CUDA_ARCH_LIST="12.1a"
+ENV CUDA_HOME=/usr/local/cuda
+ENV CUDA_INC_PATH=${CUDA_HOME}/include
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}
+ENV PIP_BREAK_SYSTEM_PACKAGES=1
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV TRITON_PTXAS_PATH=${CUDA_HOME}/bin/ptxas
+
+RUN --mount=type=cache,id=ads-creative-apt-cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,id=ads-creative-apt-lib,target=/var/lib/apt,sharing=locked \
+    apt-get update && apt-get install -y --no-install-recommends \
+      git curl ca-certificates tini \
+      python3 python3-pip python3-dev python3-venv \
+      build-essential cmake ninja-build pkg-config \
+      libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
+      ffmpeg libsndfile1 \
+      libjpeg-turbo8-dev libpng-dev \
+      git-lfs \
+    && git lfs install --system \
+    && rm -rf /var/lib/apt/lists/*
+
+# Non-root runtime user — least privilege, matches read-only-root-fs intent.
+RUN useradd --create-home --uid 10001 --shell /usr/sbin/nologin comfy
+
+ENV VENV=/opt/venv
+RUN python3 -m venv $VENV
+ENV PATH="$VENV/bin:$PATH"
+
+RUN --mount=type=cache,id=ads-creative-pip-cache,target=/root/.cache/pip \
+    pip install -U pip setuptools wheel packaging
+
+# PyTorch cu130 — first stable wheel line that ships sm_121 PTX/SASS.
+RUN --mount=type=cache,id=ads-creative-pip-cache,target=/root/.cache/pip \
+    pip install --index-url https://download.pytorch.org/whl/cu130 \
+      torch==2.9.1+cu130 torchvision==0.24.1 torchaudio==2.9.1
+
+RUN python -c "import torch; print('torch', torch.__version__, 'cuda', torch.version.cuda); print('arches:', torch.cuda.get_arch_list())"
+
+RUN --mount=type=cache,id=ads-creative-pip-cache,target=/root/.cache/pip \
+    pip install \
+      numpy pillow opencv-python-headless imageio imageio-ffmpeg \
+      einops accelerate safetensors transformers tokenizers \
+      sentencepiece protobuf psutil pyyaml tqdm \
+      huggingface-hub hf-transfer hf_xet \
+      aiohttp aiofiles gguf
+
+# -----------------------------------------------------------------------------
+# Stage 2: build SageAttention from source for sm_121a
+# (FlashAttention-2 built for sm_120 is binary-compatible; FA3 is not. Bundled
+# SageAttention wheels skip the Blackwell datacenter arch — must compile.)
+# -----------------------------------------------------------------------------
+FROM base AS sageattn-builder
+
+WORKDIR /build
+RUN --mount=type=cache,id=ads-creative-pip-cache,target=/root/.cache/pip \
+    git clone --depth=1 https://github.com/thu-ml/SageAttention.git && \
+    cd SageAttention && \
+    TORCH_CUDA_ARCH_LIST="12.1a" \
+    NVCC_APPEND_FLAGS="-gencode=arch=compute_121a,code=sm_121a -gencode=arch=compute_121,code=sm_121" \
+    pip wheel --no-build-isolation -w /wheels . && \
+    ls -la /wheels
+
+# -----------------------------------------------------------------------------
+# Stage 3: runtime
+# -----------------------------------------------------------------------------
+FROM base AS runtime
+
+COPY --from=sageattn-builder /wheels /wheels-sage
+RUN --mount=type=cache,id=ads-creative-pip-cache,target=/root/.cache/pip \
+    if ls /wheels-sage/*.whl >/dev/null 2>&1; then \
+      pip install /wheels-sage/*.whl; \
+    else \
+      echo "WARN: SageAttention wheel missing — falling back to torch SDPA math kernel"; \
+    fi
+
+ENV COMFY_HOME=/opt/ComfyUI
+# Pin to a specific commit once verified in this environment (see README.md
+# "Pinning" note) — floating on `master` is intentional only for this first
+# build so we pick up Qwen-Image-2512 / FLUX.2 / Wan 2.2 native node support
+# that landed recently; re-pin after the first successful smoke test.
+RUN git clone https://github.com/comfyanonymous/ComfyUI.git ${COMFY_HOME}
+
+WORKDIR ${COMFY_HOME}
+RUN --mount=type=cache,id=ads-creative-pip-cache,target=/root/.cache/pip \
+    pip install -r requirements.txt
+
+# -----------------------------------------------------------------------------
+# Custom nodes — only what image_text_qwen / image_fast_klein / i2v_ltx /
+# Wan 2.2 workflows need. Qwen-Image-2512, FLUX.2-klein-4B and Wan 2.2 load
+# through core nodes (UNETLoader / CLIPLoader / VAELoader / KSampler family —
+# confirmed against the official example workflows, see workflows/README).
+# LTX-2.5 needs Lightricks' own node pack (LTXVLoader / LTXVConditioning /
+# LTXVImgToVideo family — architecture-specific temporal VAE + conditioning).
+# -----------------------------------------------------------------------------
+ENV CUSTOM_NODES=${COMFY_HOME}/custom_nodes
+RUN mkdir -p ${CUSTOM_NODES} && cd ${CUSTOM_NODES} && \
+    git clone --depth=1 https://github.com/Lightricks/ComfyUI-LTXVideo.git && \
+    git clone --depth=1 https://github.com/city96/ComfyUI-GGUF.git && \
+    git clone --depth=1 https://github.com/kijai/ComfyUI-KJNodes.git && \
+    git clone --depth=1 https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git && \
+    git clone --depth=1 https://github.com/cubiq/ComfyUI_essentials.git && \
+    git clone --depth=1 https://github.com/rgthree/rgthree-comfy.git
+
+RUN --mount=type=cache,id=ads-creative-pip-cache,target=/root/.cache/pip \
+    for d in ${CUSTOM_NODES}/*/; do \
+      if [ -f "$d/requirements.txt" ]; then \
+        echo "Installing deps for $d"; \
+        pip install -r "$d/requirements.txt" || echo "skipped $d"; \
+      fi; \
+    done
+
+# ComfyUI-LTXVideo's requirements.txt pins `kornia` unpinned, which resolves
+# to the latest release — kornia 0.8.3 dropped `pad` from
+# kornia.geometry.transform.pyramid, breaking LTXVideo's own
+# pyramid_blending.py import at startup (verified against this build: import
+# error, node pack silently disabled). Pin below the break.
+RUN --mount=type=cache,id=ads-creative-pip-cache,target=/root/.cache/pip \
+    pip install "kornia<0.8.3"
+
+# -----------------------------------------------------------------------------
+# Runtime environment — DGX Spark unified-memory tuning (per research.md +
+# forum 360336 / Triplany). Clock cap is applied on the HOST, not here — see
+# README.md "Clock cap" section; a container cannot call nvidia-smi -lgc
+# against a driver it doesn't own.
+# -----------------------------------------------------------------------------
+ENV TORCH_COMPILE_DISABLE=1
+ENV TORCHDYNAMO_DISABLE=1
+ENV CUDA_MODULE_LOADING=EAGER
+ENV PYTORCH_ALLOC_CONF=expandable_segments:True
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
+ENV HF_HUB_DOWNLOAD_TIMEOUT=120
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+RUN mkdir -p /workspace/output /workspace/input /workspace/user && \
+    chown -R comfy:comfy /workspace ${COMFY_HOME}
+
+# Baked-in default only — compose.yaml bind-mounts the real one read-only
+# over this path at runtime, so editing extra_model_paths.yaml for a new
+# model doesn't require a rebuild (this COPY just means `docker run` without
+# compose still has a sane default).
+COPY --chown=comfy:comfy extra_model_paths.yaml ${COMFY_HOME}/extra_model_paths.yaml
+
+USER comfy
+WORKDIR ${COMFY_HOME}
+EXPOSE 8188
+
+ENTRYPOINT ["tini", "--"]
+# --reserve-vram 2: leave 2GB of unified memory unmanaged by ComfyUI's own
+# allocator so the CUDA driver / other processes on this shared box always
+# have headroom — required per the Spark recipes, not optional here.
+CMD ["python", "main.py", \
+     "--listen", "0.0.0.0", "--port", "8188", \
+     "--reserve-vram", "2", \
+     "--use-sage-attention", \
+     "--output-directory", "/workspace/output", \
+     "--input-directory", "/workspace/input", \
+     "--user-directory", "/workspace/user", \
+     "--extra-model-paths-config", "/opt/ComfyUI/extra_model_paths.yaml"]

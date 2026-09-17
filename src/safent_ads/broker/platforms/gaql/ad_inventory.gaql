@@ -1,0 +1,7 @@
+-- T162 (broker/platforms/google_ads_adapter.py: _AD_FIELDS + _build_select("ad_group_ad")).
+-- Solo usada por GoogleAdsAdapter.read_entity_state para entity_ref de nivel
+-- ad (fetch_account_inventory no trae anuncios individuales todavia).
+SELECT ad_group_ad.resource_name, ad_group_ad.status, ad_group_ad.ad.id,
+       ad_group_ad.ad_group, customer.currency_code
+  FROM ad_group_ad
+ WHERE ad_group_ad.status != 'REMOVED'

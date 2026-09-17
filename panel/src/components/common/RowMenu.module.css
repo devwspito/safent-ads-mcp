@@ -1,0 +1,66 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.trigger {
+  min-height: 32px;
+  min-width: 32px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .trigger:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+}
+
+.menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 168px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-floating);
+}
+
+.item {
+  min-height: 36px;
+  padding: 0 var(--sp-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .item:hover:not(:disabled) {
+    background: var(--bg-hover);
+  }
+}
+
+.item:disabled {
+  cursor: not-allowed;
+  color: var(--text-tertiary);
+}
+
+.itemDanger {
+  color: var(--sig-salir-line, #b3261e);
+}

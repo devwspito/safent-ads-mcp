@@ -1,0 +1,22 @@
+{
+  "google": {
+    "code": "google",
+    "label": "Google",
+    "account": {
+      "entity_ref": "google:account:10000000-0000-4000-8000-000000000099:20000000-0000-4000-8000-000000000099:100-000-0002",
+      "name": "100-000-0002"
+    },
+    "publish_as": null
+  },
+  "meta": {
+    "code": "meta",
+    "label": "Meta",
+    "account": {
+      "entity_ref": "meta:account:10000000-0000-4000-8000-000000000099:20000000-0000-4000-8000-000000000099:act_100000000000001",
+      "name": "act_100000000000001"
+    },
+    "publish_as": {
+      "page_name": "Clinica X"
+    }
+  }
+}

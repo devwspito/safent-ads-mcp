@@ -1,0 +1,49 @@
+.wrap {
+  position: relative;
+  min-height: 36px;
+  background: var(--bg-sunken);
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.track {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-6);
+  white-space: nowrap;
+  padding: var(--sp-2) var(--sp-4);
+}
+
+.item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.name {
+  font-weight: var(--fw-medium);
+}
+
+.item:focus-visible .name {
+  text-decoration: underline;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .item:hover .name {
+    text-decoration: underline;
+  }
+}
+
+.money {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}

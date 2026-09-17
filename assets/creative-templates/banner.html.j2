@@ -1,0 +1,93 @@
+<!doctype html>
+<!--
+  Plantilla unica para los 7 formatos de creative-port.md/AssetSpec
+  (1080x1080, 1080x1350, 1080x1920, 1200x628, 300x250, 728x90, 320x50).
+  Una plantilla parametrizada por `layout_class` (calculado en
+  banner_composer.py a partir de la relacion de aspecto) en vez de 7
+  ficheros casi identicos: DRY, un unico sitio donde corregir tipografia
+  de marca o area segura (CLAUDE.md: "prefer 3 similar lines over a
+  premature abstraction" corta tambien al reves cuando serian 7 copias
+  de 60 lineas con una sola diferencia real).
+-->
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        width: {{ width }}px;
+        height: {{ height }}px;
+        overflow: hidden;
+        font-family: "{{ brand_kit.primary_font }}", "Helvetica Neue", Arial, sans-serif;
+      }
+      .banner {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background-color: {{ brand_kit.secondary_color_hex }};
+        {% if background_image_data_uri %}
+        background-image: url("{{ background_image_data_uri }}");
+        background-size: cover;
+        background-position: center;
+        {% endif %}
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+      }
+      .safe-area {
+        position: absolute;
+        top: {{ (safe_area.top * 100) | round(2) }}%;
+        bottom: {{ (safe_area.bottom * 100) | round(2) }}%;
+        left: {{ (safe_area.left * 100) | round(2) }}%;
+        right: {{ (safe_area.right * 100) | round(2) }}%;
+      }
+      .content {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 0.4em;
+        padding: 0.6em;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+      }
+      .layout-wide .content {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.6em;
+      }
+      .headline {
+        color: #ffffff;
+        font-weight: 700;
+        font-size: {{ headline_font_px }}px;
+        line-height: 1.15;
+      }
+      .primary-text {
+        color: #f2f2f2;
+        font-size: {{ body_font_px }}px;
+        line-height: 1.3;
+      }
+      .layout-wide .primary-text { display: none; }
+      .cta {
+        display: inline-block;
+        align-self: flex-start;
+        color: #ffffff;
+        background-color: {{ brand_kit.primary_color_hex }};
+        font-family: "{{ brand_kit.secondary_font }}", "Helvetica Neue", Arial, sans-serif;
+        font-weight: 600;
+        font-size: {{ cta_font_px }}px;
+        padding: 0.35em 0.9em;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="banner {{ layout_class }}">
+      <div class="safe-area content">
+        <div class="headline">{{ headline }}</div>
+        <div class="primary-text">{{ primary_text }}</div>
+        <div class="cta">{{ cta_label }}</div>
+      </div>
+    </div>
+  </body>
+</html>

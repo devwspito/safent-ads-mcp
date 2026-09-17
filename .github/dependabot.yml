@@ -1,0 +1,32 @@
+version: 2
+updates:
+  # Las Actions viajan fijadas por SHA (T047): Dependabot es lo que
+  # propone al día el `# vX.Y.Z` de cada una sin que nadie tenga que
+  # perseguir releases a mano, en PRs revisables como cualquier otro
+  # cambio -- nunca auto-merge.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # `Containerfile` fija cada `FROM`/`COPY --from` por digest (T045
+  # IMPORTANT-5): un digest sin quien lo mueva se queda parado para
+  # siempre, incluida cualquier CVE parcheada rio arriba. Dependabot
+  # entiende `imagen:tag@sha256:...` y propone el digest nuevo sin tocar
+  # el `# vX.Y.Z` a mano.
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # `infra/creative/comfyui/Containerfile` (motor creativo local, fuera
+  # del camino de release -- README propio declara sus clones y `pip
+  # install` sin fijar) SI fija su base por tag (`nvidia/cuda:X.Y.Z-...`,
+  # sin digest): `directory: "/"` de arriba no la ve -- Dependabot no
+  # recorre subdirectorios solos. Entrada aparte para que una CUDA con CVE
+  # parcheada rio arriba no se quede muda para siempre solo porque el
+  # resto de ese Containerfile es intencionalmente no reproducible.
+  - package-ecosystem: "docker"
+    directory: "/infra/creative/comfyui"
+    schedule:
+      interval: "weekly"

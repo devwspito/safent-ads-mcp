@@ -1,0 +1,37 @@
+# Equivalente Hermes 0.21 (cron con memoria y continuidad) de los tres
+# AuthorizedTrigger TIMER de este directorio. En Safent manda el trigger
+# firmado; este fichero sirve para ejecutar el mismo agente en un Hermes
+# 0.21 sin jaula (desarrollo, réplica de pruebas).
+#
+# La entrega a Telegram está apagada a propósito: el ticker lo envía el
+# sidecar safent-ads (contracts/telegram.md), nunca el agente.
+timezone: Europe/Madrid
+defaults:
+  provider: openai-codex
+  continuity: true          # el trabajo conserva memoria entre disparos
+  memory: true
+  deliver: none             # sin entrega a gateways; el sidecar posee Telegram
+  mcp_servers: [safent-ads]
+  max_iterations: 60
+jobs:
+  - id: ads-hourly-review
+    name: "Agente de Anuncios · revisión horaria"
+    schedule: "0 * * * *"
+    model: gpt-5.6-sol
+    reasoning_effort: medium
+    prompt_file: hourly-review.json#task_instruction
+    tools_allow: hourly-review.json#allowed_capabilities
+  - id: ads-daily-structural
+    name: "Agente de Anuncios · estructural diaria"
+    schedule: "15 7 * * *"
+    model: gpt-5.6-sol
+    reasoning_effort: high
+    prompt_file: daily-structural.json#task_instruction
+    tools_allow: daily-structural.json#allowed_capabilities
+  - id: ads-weekly-opportunities
+    name: "Agente de Anuncios · oportunidades semanales"
+    schedule: "0 9 * * 1"
+    model: gpt-6-astra
+    reasoning_effort: high
+    prompt_file: weekly-opportunities.json#task_instruction
+    tools_allow: weekly-opportunities.json#allowed_capabilities

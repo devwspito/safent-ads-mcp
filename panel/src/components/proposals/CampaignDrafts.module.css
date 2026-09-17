@@ -1,0 +1,11 @@
+.section { margin-block: 1.5rem; padding: 1rem; border: 1px solid var(--border, #d8d8d8); border-radius: 12px; }
+.section h2 { font-size: 1.1rem; margin: 0 0 .6rem; }
+.section p, .section small { line-height: 1.5; overflow-wrap: anywhere; }
+.form { display: flex; gap: .75rem; align-items: end; flex-wrap: wrap; margin-block: .75rem; }
+.form label { display: flex; flex-direction: column; gap: .35rem; }
+.form input, .form textarea, .form select { font: inherit; padding: .5rem; border: 1px solid var(--border, #bbb); border-radius: 6px; background: var(--surface, white); color: inherit; }
+.form fieldset { border: none; padding: 0; display: flex; gap: .75rem; flex-wrap: wrap; align-items: end; }
+.section button { font: inherit; padding: .55rem .8rem; cursor: pointer; }
+.section button:disabled { cursor: not-allowed; opacity: .5; }
+.card { border-top: 1px solid var(--border, #ddd); padding-block: 1rem; }
+.card h3 { margin-block: .25rem; font-size: 1rem; }

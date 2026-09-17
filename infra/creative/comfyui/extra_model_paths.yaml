@@ -1,0 +1,63 @@
+# Maps our own per-model download layout (models/download.sh writes into
+# $ADS_CREATIVE_MODELS_ROOT/<model>/<comfy-type>/) onto ComfyUI's
+# search paths, instead of flattening everything into one shared
+# diffusion_models/ folder. Keeps `models/download.sh` legible (one folder per
+# model, matches the research.md table) while ComfyUI still finds each file
+# under the model-type dropdown it expects.
+#
+# Mounted into the container at /opt/ComfyUI/extra_model_paths.yaml (see
+# comfyui/Containerfile) and passed explicitly via --extra-model-paths-config
+# so it does not depend on ComfyUI's own default-search-path conventions.
+#
+# Host base: $ADS_CREATIVE_MODELS_ROOT (default ~/models/creative), bind-mounted read-only
+# into the container at /models/creative — see comfyui/compose.yaml)
+
+ads_creative_qwen_image_2512:
+  base_path: /models/creative/qwen-image-2512
+  diffusion_models: diffusion_models
+  text_encoders: text_encoders
+  vae: vae
+
+# Not populated by default anymore (see models/download.sh's Qwen section):
+# the standalone LoRA + separately-loaded "_scaled" base combo produced pure
+# noise — ComfyUI's UNETLoader drops that checkpoint's fp8 dequant scale
+# tensors as "unexpected". workflows/image_text_qwen.json now loads the
+# merged qwen_image_2512_fp8_e4m3fn_scaled_comfyui_4steps_v1.0.safetensors
+# checkpoint directly (LoRA baked in) under ads_creative_qwen_image_2512
+# above. Left declared here only in case a future loader (e.g. one that
+# understands lightx2v's raw *.weight_scale naming) makes the standalone
+# LoRA path viable again.
+ads_creative_qwen_image_2512_lightning:
+  base_path: /models/creative/qwen-image-2512-lightning
+  loras: loras
+
+# Qwen-Image-Edit-2511 ships diffusion_models only — it reuses the qwen_2.5_vl_7b
+# text encoder and qwen_image_vae already declared under
+# ads_creative_qwen_image_2512 above (ComfyUI merges same-type paths across
+# every entry in this file, so no duplicate download needed).
+ads_creative_qwen_image_edit_2511:
+  base_path: /models/creative/qwen-image-edit-2511
+  diffusion_models: diffusion_models
+
+ads_creative_flux2_klein_4b:
+  base_path: /models/creative/flux2-klein-4b
+  diffusion_models: diffusion_models
+  text_encoders: text_encoders
+  vae: vae
+
+ads_creative_ltx_2_5:
+  base_path: /models/creative/ltx-2.5
+  diffusion_models: diffusion_models
+  text_encoders: text_encoders
+  vae: vae
+  loras: loras
+
+ads_creative_wan22_ti2v_5b:
+  base_path: /models/creative/wan2.2-ti2v-5b
+  diffusion_models: diffusion_models
+  text_encoders: text_encoders
+  vae: vae
+
+ads_creative_wan22_lightning:
+  base_path: /models/creative/wan2.2-lightning
+  loras: loras

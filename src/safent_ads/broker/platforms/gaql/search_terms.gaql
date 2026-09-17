@@ -1,0 +1,11 @@
+-- list_search_terms (mcp/infrastructure/broker_search_term_read_port.py):
+-- terminos de busqueda reales de Google Ads que dispararon un anuncio,
+-- junto con la keyword contratada que los capturo (search_term_view).
+-- Sin WHERE ni LIMIT: el llamador anade "segments.date BETWEEN '<start>'
+-- AND '<end>'" con la ventana pedida (7/14/30 dias, ya validada por
+-- presentation/args.py) y "LIMIT <n>" con el tope de filas del contrato
+-- (tool-surface.md P2: <=500).
+SELECT search_term_view.search_term, segments.keyword.info.text,
+       campaign.resource_name, ad_group.resource_name, metrics.cost_micros,
+       metrics.conversions, customer.currency_code
+  FROM search_term_view

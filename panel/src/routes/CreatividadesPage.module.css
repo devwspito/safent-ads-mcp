@@ -1,0 +1,64 @@
+.lane {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+  margin-bottom: var(--sp-8);
+}
+
+.laneTitle {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-secondary);
+  margin: 0 0 var(--sp-3);
+}
+
+.laneGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: var(--sp-3);
+}
+
+.tabs {
+  display: flex;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  margin-bottom: var(--sp-4);
+}
+
+.tab {
+  flex-shrink: 0;
+  height: 28px;
+  padding: 0 var(--sp-3);
+  border: none;
+  border-right: 1px solid var(--border-default);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+
+.tab:last-child {
+  border-right: none;
+}
+
+.tabActive {
+  background: var(--bg-selected);
+  color: var(--primary-700);
+  font-weight: var(--fw-medium);
+}
+
+.gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+  gap: var(--sp-3);
+}
+
+.laneStatus { margin-bottom: var(--sp-4); }
+.notice { margin: 0 0 var(--sp-4); padding: var(--sp-3); background: var(--bg-sunken); border-radius: var(--radius-md); }
+@media (max-width: 480px) {
+  .laneGrid, .gallery { grid-template-columns: minmax(0, 1fr); }
+}

@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.env
+# Los *.example.* de abajo son plantillas sin secretos reales: se commitean
+# a proposito (T066). `secrets/*` en vez de `secrets/` para que la negacion
+# pueda ver dentro del directorio (gotcha de gitignore: excluir el
+# directorio entero bloquea la negacion de ficheros individuales).
+secrets/*
+!secrets/*.example
+config/caps.yaml
+backups/
+*.egg-info/
+dist/
+build/

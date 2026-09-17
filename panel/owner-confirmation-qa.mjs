@@ -1,0 +1,43 @@
+// Isolated mock-only browser review. No owner tokens or provider endpoints.
+import assert from 'node:assert/strict';
+import { pathToFileURL } from 'node:url';
+const { chromium } = await import(pathToFileURL(process.env.QA_PLAYWRIGHT_MODULE).href);
+const browser = await chromium.launch({ channel: 'chrome', headless: true });
+try {
+  const context = await browser.newContext({viewport:{width:1280,height:900}, reducedMotion:'reduce'});
+  await context.route('**/*', route => new URL(route.request().url()).hostname === '127.0.0.1' ? route.continue() : route.abort());
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('http://127.0.0.1:5188/');
+  await page.getByLabel('Correo', {exact:true}).waitFor();
+  await page.screenshot({path:'/tmp/safent-owner-login-desktop.png'});
+  await page.getByLabel('Correo', {exact:true}).fill('owner@negocio-ejemplo.es');
+  await page.getByLabel('Contraseña', {exact:true}).fill('demo1234');
+  await page.getByRole('button',{name:'Continuar',exact:true}).click();
+  await page.getByRole('link',{name:'Conexiones',exact:true}).click();
+  await page.getByRole('button',{name:'Reemplazar',exact:true}).first().click();
+  await page.getByLabel('Client ID',{exact:true}).fill('qa-owner.apps.googleusercontent.com');
+  await page.getByLabel('Client secret',{exact:true}).fill('synthetic-ui-secret-not-live');
+  await page.getByRole('button',{name:'Guardar',exact:true}).click();
+  const dialog = page.getByRole('dialog');
+  const confirm = dialog.getByRole('button',{name:'Guardar',exact:true});
+  await confirm.waitFor();
+  await page.waitForFunction(() => [...document.querySelectorAll('[role=dialog] button')].some(b=>b.textContent==='Guardar'&&!b.disabled));
+  assert.equal(await dialog.locator('input').count(),0);
+  assert.equal((await dialog.innerText()).includes('synthetic-ui-secret-not-live'),false);
+  assert.match(await dialog.innerText(), /qa-owner.apps.googleusercontent.com/);
+  await page.screenshot({path:'/tmp/safent-owner-confirm-desktop.png'});
+  await page.setViewportSize({width:390,height:844});
+  await page.screenshot({path:'/tmp/safent-owner-confirm-narrow.png'});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+  await page.keyboard.press('Escape');
+  await dialog.waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'Guardar',exact:true}).click();
+  await page.waitForFunction(() => [...document.querySelectorAll('[role=dialog] button')].some(b=>b.textContent==='Guardar'&&!b.disabled));
+  await page.getByRole('dialog').getByRole('button',{name:'Guardar',exact:true}).click();
+  await dialog.waitFor({state:'hidden'});
+  assert.equal(await page.getByLabel('Client secret',{exact:true}).count(),0);
+  assert.deepEqual(errors,[]);
+  console.log('PASS mock UI: password-only login; frozen safe summary; explicit confirmation; Escape; narrow 390px; no page errors.');
+} finally { await browser.close(); }

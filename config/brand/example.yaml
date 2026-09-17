@@ -1,0 +1,72 @@
+# Kit de marca de ejemplo (tool-surface.md §6: "Kit de marca: logos
+# vectoriales, tipografias con licencia, paleta, tono, reclamos prohibidos.
+# Sin esto no hay creatividad de marca").
+#
+# "Negocio Ejemplo" es un negocio ficticio, neutral y sin vertical fija --
+# la plantilla real de cualquier negocio del propietario vive en su propio
+# `config/brand/<business>.yaml`, copiado de este fichero.
+#
+# TODO propietario: sustituir cada valor marcado "REEMPLAZAR" por el dato
+# real. Ningun valor de este fichero es la marca real de ningun negocio --
+# son placeholders deliberados; el agente NUNCA debe usar este fichero para
+# generar creatividad mientras conserve un "REEMPLAZAR" (BrandKit.is_complete()
+# lo detecta y lo reporta en get_project_context/get_capabilities, nunca lo
+# finge como completo).
+#
+# Uso, una vez rellenado:
+#   uv run python -m safent_ads.tools.load_brand_kit \
+#     --business-id <uuid-del-negocio> \
+#     --file config/brand/<business>.yaml
+
+typography:
+  primary_family: "REEMPLAZAR: nombre de la tipografia principal del negocio"
+  secondary_family: null
+  licence_note: "REEMPLAZAR: origen y licencia exacta (p.ej. 'Google Fonts, SIL OFL 1.1' o 'licencia comercial, factura #, uso hasta AAAA-MM-DD')"
+  weights:
+    - "REEMPLAZAR: p.ej. regular"
+    - "REEMPLAZAR: p.ej. bold"
+
+palette:
+  - role: primary
+    hex: "#000000" # REEMPLAZAR: color primario real en #RRGGBB
+    contrast_ratio_on_white: 21.0 # REEMPLAZAR: contraste medido (herramienta de contraste WCAG)
+  - role: secondary
+    hex: "#000000" # REEMPLAZAR
+    contrast_ratio_on_white: 21.0 # REEMPLAZAR
+  - role: text
+    hex: "#000000" # REEMPLAZAR
+    contrast_ratio_on_white: 21.0 # REEMPLAZAR
+
+tone_of_voice:
+  description: "REEMPLAZAR: como suena el negocio al escribir (2-4 frases; formal/cercano, con o sin humor, a quien se dirige)"
+  adjectives:
+    - "REEMPLAZAR"
+  avoid:
+    - "REEMPLAZAR: palabras o giros que el negocio nunca usa"
+
+# Logos vectoriales y fotos de referencia aprobadas (tool-surface.md:
+# "Logotipos y fotos aprobadas como referencia de edicion"). `storage_uri`
+# apunta al almacen de activos del propietario, no a una URL publica.
+assets:
+  - asset_id: "REEMPLAZAR-logo-principal"
+    kind: logo_vector
+    storage_uri: "REEMPLAZAR: ruta o URI interna al SVG del logo principal"
+    usage_rule: "REEMPLAZAR: reglas de uso (p.ej. 'no deformar; espacio libre minimo 2x altura del logo; solo sobre fondo claro')"
+
+# Reclamos permitidos para los anuncios del negocio; el producto añade
+# siempre un suelo de reclamos PROHIBIDOS, generico y valido para cualquier
+# vertical (claims_policy.DEFAULT_FORBIDDEN_CLAIMS: "garantizado",
+# "exito asegurado", ...), que este fichero no puede rebajar, solo ampliar.
+claims_allowlist: []
+
+# Ejemplo: cada negocio anade aqui los reclamos de resultado que su sector
+# o la ley no le permiten prometer. No forman parte del suelo generico de
+# `claims_policy.py` porque dependen del negocio (una tienda no promete lo
+# mismo que una clinica). Sustituir por los reclamos reales del negocio.
+forbidden_claims:
+  - "resultados garantizados" # ejemplo generico: promesa de resultado
+  - "el mas barato del mercado" # ejemplo generico: superlativo sin prueba
+
+legal_disclaimers: []
+
+platform_constraints: []

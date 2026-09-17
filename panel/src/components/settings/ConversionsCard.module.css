@@ -1,0 +1,161 @@
+.card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+}
+
+.subsection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.hint {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-6);
+  border: 2px dashed var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  text-align: center;
+}
+
+.dropzoneActive {
+  border-color: var(--primary-500);
+  background: var(--bg-selected);
+}
+
+.dropHint {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.fileButton {
+  display: inline-block;
+  padding: var(--sp-2) var(--sp-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--primary-700);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.fileInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.rejectedList {
+  margin: var(--sp-2) 0 0;
+  padding-left: var(--sp-4);
+  font-size: var(--fs-2xs);
+  color: var(--text-secondary);
+}
+
+.webhookUrl {
+  display: block;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.generate {
+  align-self: flex-start;
+  height: 32px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--primary-700);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.generate:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.tokenReveal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--primary-500);
+  border-radius: var(--radius-md);
+  background: var(--bg-selected);
+}
+
+.tokenWarning {
+  margin: 0;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+}
+
+.tokenRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.token {
+  flex: 1;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  font-size: var(--fs-xs);
+  overflow-wrap: anywhere;
+}
+
+.copy {
+  height: 28px;
+  padding: 0 var(--sp-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--primary-700);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.status {
+  font-size: var(--fs-xs);
+  color: var(--sig-subir-text);
+}
+
+.error {
+  font-size: var(--fs-xs);
+  color: var(--st-freno-text);
+}

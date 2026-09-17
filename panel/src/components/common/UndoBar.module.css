@@ -1,0 +1,80 @@
+.wrap {
+  position: fixed;
+  left: 50%;
+  bottom: var(--sp-6);
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  z-index: 90;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  background: var(--bg-raised);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-floating);
+  padding: var(--sp-2) var(--sp-3);
+  font-size: var(--fs-sm);
+  color: var(--text-primary);
+  min-width: 280px;
+}
+
+.label {
+  flex: 1;
+}
+
+.time {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+  font-size: var(--fs-xs);
+}
+
+.button {
+  height: 28px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--primary-700);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .button:hover {
+    background: var(--bg-hover);
+  }
+}
+
+.expandToggle {
+  background: none;
+  border: none;
+  color: var(--text-tertiary);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  padding: 0;
+}
+
+.detailList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  background: var(--bg-raised);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-floating);
+  padding: var(--sp-2) var(--sp-3);
+  margin: 0;
+  list-style: none;
+}
+
+.detailItem {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  font-size: var(--fs-xs);
+}

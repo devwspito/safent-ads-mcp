@@ -1,0 +1,45 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-4) 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.heading {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.figures {
+  display: flex;
+  gap: var(--sp-6);
+  margin: 0;
+  flex-wrap: wrap;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.label {
+  font-size: var(--fs-2xs);
+  color: var(--text-tertiary);
+}
+
+.value {
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.envelope {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}

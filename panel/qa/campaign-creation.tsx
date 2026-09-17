@@ -1,0 +1,10 @@
+import { createRoot } from 'react-dom/client';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
+import { PropuestasPage } from '../src/routes/PropuestasPage';
+import '../src/styles/tokens.css';
+import '../src/styles/global.css';
+if(!import.meta.env.DEV) throw new Error('QA only');
+const info=await fetch('/qa-info').then(response=>response.json());
+if(info.isolated!==true) throw new Error('The campaign QA entry requires its isolated test server');
+createRoot(document.getElementById('root')!).render(<QueryClientProvider client={new QueryClient({defaultOptions:{queries:{retry:false}}})}><MemoryRouter initialEntries={[`/?business_id=${info.business_id}`]}><main style={{maxWidth:1100,margin:'24px auto',padding:20}}><p>QA AISLADA · PostgreSQL efímero · Sin trabajadores ni proveedores</p><PropuestasPage/></main></MemoryRouter></QueryClientProvider>);

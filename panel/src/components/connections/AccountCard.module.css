@@ -1,0 +1,119 @@
+.card {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.technicalDetails {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.technicalDetails summary {
+  cursor: pointer;
+  color: var(--text-link);
+}
+
+.technicalDetails > .grid {
+  margin-top: var(--sp-2);
+}
+
+.label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+}
+
+/** Ficha de estado con relleno (visual-designer, 2026-09-16): la cuenta está haciendo algo
+ * (activa) o necesita atención (solo lectura/suspendida) — nunca solo un contorno. */
+.status {
+  font-size: var(--fs-2xs);
+  padding: 2px var(--sp-1);
+  border-radius: var(--radius-sm);
+  border: 1px solid;
+}
+
+.statusActive {
+  color: var(--sig-subir-text);
+  border-color: var(--sig-subir-line);
+  background: var(--sig-subir-fill);
+}
+
+.statusReadOnly {
+  color: var(--st-obsoleto-text);
+  border-color: var(--st-obsoleto-line);
+  background: var(--st-obsoleto-fill);
+}
+
+.statusSuspended {
+  color: var(--st-freno-text);
+  border-color: var(--st-freno-line);
+  background: var(--st-freno-fill);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--sp-2);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fieldLabel {
+  font-size: var(--fs-2xs);
+  color: var(--text-tertiary);
+}
+
+.fieldValue {
+  overflow-wrap: anywhere;
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+}
+
+.levers {
+  font-size: var(--fs-2xs);
+  color: var(--text-secondary);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.revokeButton {
+  height: 30px;
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--danger-solid);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--danger-solid);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.revokeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.revokeError {
+  font-size: var(--fs-xs);
+  color: var(--st-freno-text);
+}

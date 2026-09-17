@@ -1,0 +1,126 @@
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-canvas);
+  padding: var(--sp-4);
+}
+
+.card {
+  width: min(440px, 100%);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-raised);
+  padding: var(--sp-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--text-primary);
+}
+
+.clientName {
+  word-break: break-word;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: var(--sp-3);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-sm);
+}
+
+.detailLabel {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.detailValue {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.scopesTitle {
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-primary);
+}
+
+.scopesList {
+  margin: 0;
+  padding-left: var(--sp-6);
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.body {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.formError {
+  font-size: var(--fs-sm);
+  color: var(--st-freno-text);
+  background: var(--st-freno-fill);
+  border: 1px solid var(--st-freno-line);
+  border-radius: var(--radius-md);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  margin-top: var(--sp-2);
+}
+
+.primaryButton {
+  height: 40px;
+  padding: 0 var(--sp-4);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--primary-700);
+  color: var(--on-primary);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.primaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.secondaryButton {
+  height: 40px;
+  padding: 0 var(--sp-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+
+.secondaryButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -1,0 +1,109 @@
+{
+  "1": {
+    "class_type": "UNETLoader",
+    "_meta": { "title": "Load Diffusion Model (FLUX.2-klein-4B)" },
+    "inputs": {
+      "unet_name": "flux-2-klein-4b.safetensors",
+      "weight_dtype": "default"
+    }
+  },
+  "2": {
+    "class_type": "CLIPLoader",
+    "_meta": { "title": "Load CLIP (Qwen3-4B, fp4)" },
+    "inputs": {
+      "clip_name": "qwen_3_4b_fp4_flux2.safetensors",
+      "type": "flux2",
+      "device": "default"
+    }
+  },
+  "3": {
+    "class_type": "VAELoader",
+    "_meta": { "title": "Load VAE" },
+    "inputs": { "vae_name": "flux2-vae.safetensors" }
+  },
+  "4": {
+    "class_type": "CLIPTextEncode",
+    "_meta": { "title": "CLIP Text Encode (Positive Prompt)" },
+    "inputs": {
+      "text": "{{prompt}}",
+      "clip": ["2", 0]
+    }
+  },
+  "5": {
+    "class_type": "FluxGuidance",
+    "_meta": {
+      "title": "Flux Guidance",
+      "note": "GUESSED value — no klein-specific official example workflow was published as of 2026-09-09 (comfyanonymous.github.io/ComfyUI_examples/flux2/ covers flux2-dev multi-reference editing, not klein T2I). klein is a distilled/fast variant; 1.0 (near-neutral) is a conservative starting point — tune per output quality."
+    },
+    "inputs": {
+      "guidance": 1.0,
+      "conditioning": ["4", 0]
+    }
+  },
+  "6": {
+    "class_type": "RandomNoise",
+    "_meta": { "title": "Random Noise" },
+    "inputs": { "noise_seed": "{{seed}}" }
+  },
+  "7": {
+    "class_type": "KSamplerSelect",
+    "_meta": { "title": "KSampler Select" },
+    "inputs": { "sampler_name": "euler" }
+  },
+  "8": {
+    "class_type": "EmptyFlux2LatentImage",
+    "_meta": { "title": "Empty Flux 2 Latent" },
+    "inputs": {
+      "width": "{{width}}",
+      "height": "{{height}}",
+      "batch_size": 1
+    }
+  },
+  "9": {
+    "class_type": "Flux2Scheduler",
+    "_meta": {
+      "title": "Flux 2 Scheduler (4-step)",
+      "note": "steps=4 matches klein's distilled 4-step design (research.md); width/height mirrored from node 8 per the official flux2 example's own convention."
+    },
+    "inputs": {
+      "steps": 4,
+      "width": "{{width}}",
+      "height": "{{height}}"
+    }
+  },
+  "10": {
+    "class_type": "BasicGuider",
+    "_meta": { "title": "Basic Guider" },
+    "inputs": {
+      "model": ["1", 0],
+      "conditioning": ["5", 0]
+    }
+  },
+  "11": {
+    "class_type": "SamplerCustomAdvanced",
+    "_meta": { "title": "SamplerCustomAdvanced" },
+    "inputs": {
+      "noise": ["6", 0],
+      "guider": ["10", 0],
+      "sampler": ["7", 0],
+      "sigmas": ["9", 0],
+      "latent_image": ["8", 0]
+    }
+  },
+  "12": {
+    "class_type": "VAEDecode",
+    "_meta": { "title": "VAE Decode" },
+    "inputs": {
+      "samples": ["11", 0],
+      "vae": ["3", 0]
+    }
+  },
+  "13": {
+    "class_type": "SaveImage",
+    "_meta": { "title": "Save Image" },
+    "inputs": {
+      "filename_prefix": "ads-creative-klein",
+      "images": ["12", 0]
+    }
+  }
+}

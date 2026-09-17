@@ -1,0 +1,72 @@
+# ads-creative-comfyui — local creative-generation engine for Safent Ads.
+#
+# DGX Spark ground rules (see ../README.md for the full list):
+#   - ONE model loaded at a time. Do not start this alongside any other GPU
+#     workload you control; the training job already on this box (~24GB) is
+#     out of scope and must never be touched.
+#   - 127.0.0.1 only — this is a local worker, not a public service.
+#   - No `deploy.replicas`, no autoscaling: unified memory is the whole box.
+name: ads-creative
+
+services:
+  ads-creative-comfyui:
+    build:
+      context: .
+      dockerfile: Containerfile
+    image: ads-creative-comfyui:local
+    container_name: ads-creative-comfyui
+    restart: "no"   # NUNCA autoarranque: la generación local tumbó la DGX 4 veces (9-sep)
+    ports:
+      - "127.0.0.1:8188:8188"
+    volumes:
+      # Read-only: this container generates images/video, it does not manage
+      # weights. models/download.sh is the only writer.
+      # `ADS_CREATIVE_MODELS_ROOT` es la raíz de pesos de ESTA máquina
+      # (la misma que usa ../models/download.sh); por defecto,
+      # ~/models/creative.
+      - ${ADS_CREATIVE_MODELS_ROOT:-${HOME}/models/creative}:/models/creative:ro
+      # Bind-mounted, not baked into the image (Containerfile's COPY is only a
+      # build-time default) — editing this file and adding a new model
+      # doesn't need a rebuild, just `docker compose restart`. Learned the
+      # hard way: added Wan2.2 text_encoders/vae here without rebuilding and
+      # ComfyUI's CLIPLoader/VAELoader dropdowns still only listed the old set.
+      - ./extra_model_paths.yaml:/opt/ComfyUI/extra_model_paths.yaml:ro
+      - ads-creative-comfyui-output:/workspace/output
+      - ads-creative-comfyui-input:/workspace/input
+      - ads-creative-comfyui-user:/workspace/user
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+      # Keep torch.compile off — Triton lacks sm_121a support as of this
+      # build (research.md §0); do not flip this without re-verifying.
+      - TORCH_COMPILE_DISABLE=1
+      - TORCHDYNAMO_DISABLE=1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Not read_only: ComfyUI and its custom nodes write scratch/pycache files
+    # under the install tree at runtime. Revisit once the exact write paths
+    # are enumerated (tmpfs + explicit writable mounts) — tracked as a
+    # follow-up hardening item, not blocking first bring-up.
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8188/system_stats', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+volumes:
+  ads-creative-comfyui-output:
+    name: ads-creative-comfyui-output
+  ads-creative-comfyui-input:
+    name: ads-creative-comfyui-input
+  ads-creative-comfyui-user:
+    name: ads-creative-comfyui-user
