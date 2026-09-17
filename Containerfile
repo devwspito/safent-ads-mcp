@@ -10,7 +10,7 @@
 # solo en tiempo de build).
 # =============================================================================
 
-FROM python:3.12-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254 AS builder
+FROM python:3.14-slim-bookworm@sha256:9ab8d9c8514b44f90cf0029dd42fdd7e9e211e639c8b995304cc04568dee900f AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential \
@@ -48,7 +48,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # .github/workflows/ci.yml para que build local y CI compilen con el mismo
 # Node. Esta etapa nunca llega a runtime -- solo su `dist/` de salida.
 # -----------------------------------------------------------------------------
-FROM python:3.12-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254 AS native-mcp-builder
+FROM python:3.14-slim-bookworm@sha256:9ab8d9c8514b44f90cf0029dd42fdd7e9e211e639c8b995304cc04568dee900f AS native-mcp-builder
 COPY --from=ghcr.io/astral-sh/uv:0.10.11@sha256:3472e43b4e738cf911c99d41bb34331280efad54c73b1def654a6227bb59b2b4 /uv /usr/local/bin/
 COPY infra/native-mcp/requirements.lock /build/requirements.lock
 RUN uv venv /opt/google-ads-mcp && \
@@ -83,7 +83,7 @@ RUN npm run build
 # activa el grupo con `group_add`, porque `user: uid:gid` no aplica grupos
 # suplementarios de /etc/group por si solo.
 # -----------------------------------------------------------------------------
-FROM python:3.12-slim-bookworm@sha256:782412e85d0f0984994c290652577d4018aff08145c85b262bb63dc0c7522254 AS runtime
+FROM python:3.14-slim-bookworm@sha256:9ab8d9c8514b44f90cf0029dd42fdd7e9e211e639c8b995304cc04568dee900f AS runtime
 
 RUN groupadd --gid 10001 adsapi \
     && useradd --uid 10001 --gid adsapi --no-create-home --shell /usr/sbin/nologin adsapi \
