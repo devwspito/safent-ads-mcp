@@ -6,6 +6,7 @@ import { LoginPage } from "@/routes/LoginPage";
 import { getAdsBasePath } from "@/utils/basePath";
 
 const PropuestasPage = lazy(() => import("@/routes/PropuestasPage").then((m) => ({ default: m.PropuestasPage })));
+const LaunchProposalPage = lazy(() => import("@/routes/LaunchProposalPage").then((m) => ({ default: m.LaunchProposalPage })));
 const PackagePreviewIndexPage = lazy(() => import("@/routes/PackagePreviewPage").then((m) => ({ default: m.PackagePreviewIndexPage })));
 const PackagePreviewPage = lazy(() => import("@/routes/PackagePreviewPage").then((m) => ({ default: m.PackagePreviewPage })));
 const CampanasPage = lazy(() => import("@/routes/CampanasPage").then((m) => ({ default: m.CampanasPage })));
@@ -37,6 +38,7 @@ export function App() {
           <Route path="/oauth/autorizar" element={<ConsentimientoPage />} />
           <Route element={<AppShell />}>
             <Route path="/propuestas" element={<PropuestasPage />} />
+            <Route path="/propuestas/lanzamiento/:slug" element={<LaunchProposalPage />} />
             <Route path="/propuestas/historial" element={<RegistroPage />} />
             {/* Ruta de comprobación T050/T051 (tasks.md) — pendiente de que T052 la enganche en la fila. */}
             <Route path="/propuestas/paquete" element={<PackagePreviewIndexPage />} />
