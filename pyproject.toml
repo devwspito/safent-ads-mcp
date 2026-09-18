@@ -1,6 +1,6 @@
 [project]
 name = "safent-ads"
-version = "0.2.47"
+version = "0.2.48"
 description = "Ecosistema publicitario Safent Ads: control central sobre Google Ads y Meta Ads con punto único de escritura."
 requires-python = ">=3.12,<3.13"
 readme = "README.md"

@@ -60,6 +60,7 @@ async def test_ver_lists_only_the_pinned_read_catalog(
 
     names = {tool.name for tool in tools.tools}
     assert len(names) == READ_TOOL_COUNT
+    assert {"get_store_api_status", "get_store_catalog"} <= names
     assert not any(name.startswith(("propose_", "connect_platform_account")) for name in names)
 
 

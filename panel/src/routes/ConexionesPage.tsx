@@ -7,6 +7,7 @@ import { useDeletePlatformAppCredentials, usePlatformApps } from "@/api/queries/
 import type { Platform } from "@/api/schemas";
 import { AccountCard } from "@/components/connections/AccountCard";
 import { CloudflareConnectionCard } from "@/components/connections/CloudflareConnectionCard";
+import { StoreApiConnectionCard } from "@/components/connections/StoreApiConnectionCard";
 import { ConnectedAgentsSection } from "@/components/connections/ConnectedAgentsSection";
 import { ConnectProviderCard } from "@/components/connections/ConnectProviderCard";
 import { DeveloperCredentialsCard } from "@/components/connections/DeveloperCredentialsCard";
@@ -92,6 +93,7 @@ export function ConexionesPage() {
         <h3 id="integrations-title" className={styles.sectionTitle}>Integraciones</h3>
         <p className={styles.explanation}>Herramientas adicionales, independientes de tus cuentas de anuncios.</p>
         <CloudflareConnectionCard />
+        {businessId ? <StoreApiConnectionCard key={businessId} businessId={businessId} /> : null}
       </section>
 
       {!guidedSetup ? (

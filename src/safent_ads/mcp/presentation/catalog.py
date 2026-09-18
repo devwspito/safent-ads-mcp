@@ -27,6 +27,7 @@ from typing import Any
 
 from safent_ads.catalog.application.create_offering import CreateOffering
 from safent_ads.economics.application.query_service import EconomicsQueryService
+from safent_ads.integrations.store_api.service import StoreApiService
 from safent_ads.mcp.application.caller_scope import Permission
 from safent_ads.mcp.application.proposal_write_port import ProposalWritePort
 from safent_ads.mcp.presentation import args as a
@@ -98,6 +99,7 @@ from safent_ads.mcp.presentation.search_terms_tools import (
     SearchTermsToolServices,
     build_search_terms_tool_definitions,
 )
+from safent_ads.mcp.presentation.store_api_tools import build_store_api_tools
 from safent_ads.mcp.presentation.write_handlers import build_write_handlers
 from safent_ads.opportunities.infrastructure.campaign_drafts_sql import CampaignDraftStore
 from safent_ads.optimization.application.query_service import OptimizationQueryService
@@ -246,14 +248,13 @@ _CATALOG: tuple[tuple[str, str, type[a.ToolArgs]], ...] = (
     ),
     (
         "get_signal",
-        "Detalle de una senal concreta por `signal_id`: metrica, causa y ventana de "
-        "evaluacion.",
+        "Detalle de una senal concreta por `signal_id`: metrica, causa y ventana de evaluacion.",
         a.GetSignalArgs,
     ),
     (
         "explain_signal",
-        "Narrativa en castellano llano de por que se disparo una senal (p.ej. \"CPL 41 "
-        "€ vs objetivo 28 €\"), lista para citar como `cause.text` en una propuesta.",
+        'Narrativa en castellano llano de por que se disparo una senal (p.ej. "CPL 41 '
+        '€ vs objetivo 28 €"), lista para citar como `cause.text` en una propuesta.',
         a.ExplainSignalArgs,
     ),
     (
@@ -312,8 +313,8 @@ _CATALOG: tuple[tuple[str, str, type[a.ToolArgs]], ...] = (
     ),
     (
         "list_offerings",
-        "Catalogo de productos u ofertas vendibles del negocio (p.ej. \"Citas "
-        "veterinarias\"), con precio. Necesario antes de `propose_campaign`.",
+        'Catalogo de productos u ofertas vendibles del negocio (p.ej. "Citas '
+        'veterinarias"), con precio. Necesario antes de `propose_campaign`.',
         a.ListOfferingsArgs,
     ),
     (
@@ -462,6 +463,7 @@ def build_default_registry(
     package_services: PackageToolServices | None = None,
     kit_services: KitToolServices | None = None,
     cloudflare_services: CloudflareToolServices | None = None,
+    store_api_service: StoreApiService | None = None,
     google_tag_manager_services: GoogleTagManagerToolServices | None = None,
     enabled_google_channels: frozenset[GoogleAdvertisingChannelType] = frozenset(
         {GoogleAdvertisingChannelType.SEARCH}
@@ -539,6 +541,8 @@ def build_default_registry(
     # parametro a esa cadena -- una linea, mismo criterio de aislamiento.
     if cloudflare_services is not None:
         definitions.extend(build_cloudflare_tool_definitions(cloudflare_services))
+    if store_api_service is not None:
+        definitions.extend(build_store_api_tools(store_api_service))
     if google_tag_manager_services is not None:
         definitions.extend(build_google_tag_manager_tool_definitions(google_tag_manager_services))
     return ToolRegistry(definitions)

@@ -18,6 +18,19 @@ diseño existe para que esa frase sea cierta incluso con la API comprometida.
 El panel es un SPA que `ads-api` sirve desde la misma imagen; no es un
 despliegue aparte.
 
+El conector opcional de catálogo y stock es de **solo lectura**, independiente
+de las campañas. Su origen HTTPS lo fija el operador; el dueño introduce el
+token en Conexiones. Igual que la conexión Cloudflare, se guarda cifrado en
+la base de `ads-api`, con separación criptográfica por negocio y origen. No
+se expone por MCP ni se envía al navegador de vuelta. Las lecturas usan tres
+rutas cerradas, paginación acotada, filtrado de campos y protección SSRF;
+no existe operación de escritura de catálogo o inventario.
+
+Los planes de lanzamiento son material de revisión del directorio del kit,
+aislado por negocio. Solo la landing y sus activos explícitamente marcados
+como públicos se sirven sin sesión. Los documentos y vídeos cargados en el
+panel siguen privados: subir un vídeo no publica un anuncio ni autoriza gasto.
+
 ## Capas
 
 Cada contexto (`accounts`, `proposals`, `execution`, `metrics`, `signals`,
