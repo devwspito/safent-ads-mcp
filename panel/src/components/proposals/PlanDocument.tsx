@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import styles from "./LaunchPlans.module.css";
 
 /** Small review-document renderer: text is always React-escaped; no HTML execution. */
 function inline(text: string): ReactNode[] {
@@ -28,7 +29,7 @@ export function PlanDocument({ text }: { text: string }) {
         index++;
       }
       index--;
-      blocks.push(<div key={start} style={{ overflowX: "auto" }}><table><thead><tr>{rows[0]?.map((cell, i) => <th key={i}>{inline(cell)}</th>)}</tr></thead><tbody>{rows.slice(1).map((row, r) => <tr key={r}>{row.map((cell, c) => <td key={c}>{inline(cell)}</td>)}</tr>)}</tbody></table></div>);
+      blocks.push(<div key={start} className={styles.tableScroll}><table><thead><tr>{rows[0]?.map((cell, i) => <th key={i}>{inline(cell)}</th>)}</tr></thead><tbody>{rows.slice(1).map((row, r) => <tr key={r}>{row.map((cell, c) => <td key={c}>{inline(cell)}</td>)}</tr>)}</tbody></table></div>);
     } else if (/^[-*] /.test(line) || /^\d+\. /.test(line)) {
       const numbered = /^\d+\. /.test(line);
       const pattern = numbered ? /^\d+\. / : /^[-*] /;

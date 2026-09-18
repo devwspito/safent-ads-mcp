@@ -20,8 +20,8 @@ from safent_ads.shared.crypto.hkdf import derive_key
 from safent_ads.shared.ids import BusinessId
 from safent_ads.shared.net.safe_egress import (
     BlockedEgressAddressError,
+    build_pinned_async_client,
     default_resolver,
-    pin_request,
 )
 
 Resource = Literal["catalog", "store-catalog", "stock"]
@@ -106,14 +106,19 @@ async def fetch_page(
     ):
         raise StoreApiError("Recurso o paginación no válidos.")
     try:
-        async with httpx.AsyncClient(trust_env=False, follow_redirects=False, timeout=15) as client:
+        checked_base = validate_base(base)
+        async with build_pinned_async_client(
+            allowed_hosts=frozenset({urlsplit(checked_base).hostname or ""}),
+            resolver=default_resolver,
+            timeout=15,
+            trust_env=False,
+        ) as client:
             request = client.build_request(
                 "GET",
-                f"{validate_base(base)}/v1/{resource}",
+                f"{checked_base}/v1/{resource}",
                 params={"page": page, "per_page": per_page},
                 headers={"Authorization": f"Bearer {token}", "Accept": "application/json"},
             )
-            await pin_request(request, resolver=default_resolver)
             response = await client.send(request, stream=True)
             try:
                 if response.status_code != _SUCCESS:

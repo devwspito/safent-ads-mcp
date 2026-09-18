@@ -95,8 +95,13 @@ async def test_failed_probe_never_replaces_saved_token(monkeypatch: pytest.Monke
 
 
 def mock_http(monkeypatch: pytest.MonkeyPatch, handler: object) -> None:
-    client = httpx.AsyncClient(transport=httpx.MockTransport(handler))
-    monkeypatch.setattr(module.httpx, "AsyncClient", lambda **_kwargs: client)
+    transport = httpx.MockTransport(handler)
+
+    async def send(_self, request):
+        return await transport.handle_async_request(request)
+
+    # Intercept only the socket layer, retaining the real pinned/allowlisted transport.
+    monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", send)
     monkeypatch.setattr(module, "default_resolver", AsyncMock(return_value=["93.184.216.34"]))
 
 
