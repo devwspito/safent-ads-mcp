@@ -10,7 +10,8 @@
 .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 12px; }
 .tabs button { padding: 9px 14px; border: 1px solid #ccd9dc; border-radius: 8px; background: transparent; color: inherit; cursor: pointer; }
 .tabs button[aria-pressed="true"] { background: #e8f5f3; border-color: #309f95; color: #205b55; }
-.document { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 560px; overflow: auto; background: #f7f9fa; color: #26373b; padding: 24px; border-radius: 12px; line-height: 1.75; font-size: 14px; }
+.document { overflow-wrap: anywhere; max-height: 560px; overflow: auto; background: #f7f9fa; color: #26373b; padding: 24px; border-radius: 12px; line-height: 1.75; font-size: 14px; }
+.document h3 { margin: 28px 0 12px; font-size: 20px; }.document h3:first-child { margin-top: 0; }.document h4 { margin: 22px 0 8px; font-size: 16px; }.document table { border-collapse: collapse; width: 100%; min-width: 540px; font-size: 13px; }.document th,.document td { border: 1px solid #d9e1e3; padding: 10px; text-align: left; vertical-align: top; }.document th { background: #e8f5f3; }.document li { margin: 8px 0; }.document a { color: #205b55; text-decoration: underline; }
 .slots { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 16px; }
 .slot { padding: 18px; border: 1px solid #d9e1e3; border-radius: 12px; }
 .slot h4 { margin-top: 0; }.slot p { line-height: 1.6; }.slot video { width: 100%; max-height: 350px; margin-top: 12px; }

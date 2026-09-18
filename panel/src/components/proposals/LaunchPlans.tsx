@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiClient } from "@/api/client";
 import { getAdsBasePath } from "@/utils/basePath";
 import styles from "./LaunchPlans.module.css";
+import { PlanDocument } from "./PlanDocument";
 
 const slotSchema = z.object({ id: z.string(), title: z.string(), format: z.string(), copy: z.string(), uploaded: z.boolean() });
 const reviewSchema = z.object({ approved: z.boolean(), approved_at: z.string().nullable() });
@@ -53,7 +54,7 @@ function LaunchPlan({ plan, businessId }: { plan: Plan; businessId: string }) {
     {plan.proposal_id ? <p>Propuesta de campaña asociada: <code>{plan.proposal_id}</code>. Su aprobación se realiza en la tarjeta de propuesta.</p> : null}
     {plan.blockers.length ? <details className={styles.blockers} open><summary>Pendientes antes de activar ({plan.blockers.length})</summary><ul>{plan.blockers.map(item => <li key={item}>{item}</li>)}</ul></details> : null}
     <div className={styles.tabs} role="group" aria-label="Documentos del lanzamiento">{plan.documents.map((doc, index) => <button key={doc.title} type="button" aria-pressed={selected === index} onClick={() => setSelected(index)}>{doc.title}</button>)}</div>
-    <div className={styles.document} tabIndex={0} aria-label={plan.documents[selected]?.title}>{plan.documents[selected]?.text}</div>
+    <div className={styles.document} tabIndex={0} aria-label={plan.documents[selected]?.title}><PlanDocument text={plan.documents[selected]?.text ?? ""} /></div>
     <div className={styles.review}><p>{plan.review.approved ? "Plan aprobado para preparación. Los anuncios y cualquier gasto requieren su aprobación operativa por separado." : "Aprueba esta versión del plan para continuar la preparación. Esta aprobación no activa anuncios, gasto, registros ni WhatsApp; los pendientes anteriores siguen vigentes."}</p>{!plan.review.approved ? <button type="button" disabled={Boolean(busy)} onClick={() => void approve()}>Aprobar plan · sin activar campañas</button> : <strong>Revisión guardada</strong>}</div>
     <h3>Vídeos de los anuncios</h3><p>Los textos ya están preparados. Guarda los MP4 en sus huecos para revisarlos. Esta carga conserva los archivos; el envío a Meta y la publicación requieren preparar y aprobar los anuncios con esos activos.</p>
     <div className={styles.slots}>{plan.video_slots.map(slot => <section key={slot.id} className={styles.slot}><h4>{slot.title}</h4><p>{slot.format}</p><p>{slot.copy}</p>{slot.uploaded ? <><strong>Vídeo guardado</strong><video controls preload="metadata" src={`${base}/api/v1/launch-plans/${encodeURIComponent(plan.slug)}/videos/${encodeURIComponent(slot.id)}?business_id=${encodeURIComponent(businessId)}`} /></> : <label className={styles.upload}>Añadir vídeo MP4<input type="file" accept="video/mp4,.mp4" disabled={Boolean(busy)} onChange={event => void upload(slot.id, event.target.files?.[0])} /></label>}</section>)}</div>
