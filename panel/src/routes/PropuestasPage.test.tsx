@@ -28,6 +28,25 @@ function renderPage() {
 describe("PropuestasPage", () => {
   beforeEach(() => setMockSessionForTests(true));
 
+  it("lists editorial launch plans under the page header without a contradictory empty inbox", async () => {
+    const baseline = listProposalGroups("urgency");
+    server.use(
+      http.get(`${API_BASE}/proposals`, () => HttpResponse.json({ ...baseline, pending_count: 0, groups: [] })),
+      http.get(`${API_BASE}/launch-plans`, () => HttpResponse.json({ items: [{
+        slug: "opening", title: "Opening proposal", summary: "Personal invitation", proposal_id: null,
+        landing_url: "/eventos/opening", blockers: ["Not ready to launch"], documents: [{ title: "Strategy", text: "Full private document" }],
+        video_slots: [], revision: "a".repeat(64), review: { approved: false, approved_at: null },
+      }] })),
+    );
+    renderPage();
+    const card = await screen.findByRole("link", { name: /Opening proposal.*Ver detalle/ });
+    expect(screen.getByRole("heading", { name: "Propuestas" }).compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText(/1 plan disponible/)).toBeInTheDocument();
+    expect(screen.queryByText("Nada que decidir")).not.toBeInTheDocument();
+    expect(screen.queryByText("Nada pendiente ahora mismo")).not.toBeInTheDocument();
+    expect(screen.queryByText("Full private document")).not.toBeInTheDocument();
+  });
+
   it("bloquea crear sin plan incluso con flags de expansión/lote incorrectos y atajos", async () => {
     let approvals=0;
     const item={...getProposalDetail("prop_006"),action_kind:"create_campaign",entity_name:"Creación pendiente",requires_expansion:false,creation_plan:null,creation_plan_error:"campaign_creation_plan_required"};

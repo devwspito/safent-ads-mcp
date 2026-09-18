@@ -35,6 +35,7 @@ import styles from "./PropuestasPage.module.css";
 import { UnconfirmedExecutions } from "@/components/proposals/UnconfirmedExecutions";
 import { campaignPlanReady } from "@/api/schemas/campaignCreation";
 import { LaunchPlans } from "@/components/proposals/LaunchPlans";
+import { useLaunchPlans } from "@/api/queries/launchPlans";
 
 /** `phrase` viene del servidor en el 428 (rest-api.md §Propuestas): nunca se inventa en el cliente. */
 type PendingDialog =
@@ -65,11 +66,13 @@ export function PropuestasPage() {
   const { data: me } = useMe();
   const { businessId } = useBusinessFilter(me?.businesses);
   // Business changes discard selections, dialogs and late results from the old inbox.
-  return <><LaunchPlans businessId={businessId} /><BusinessProposalsPage key={businessId} businessId={businessId} /></>;
+  return <BusinessProposalsPage key={businessId} businessId={businessId} />;
 }
 
 function BusinessProposalsPage({ businessId }: { businessId: string }) {
   const { filters, setFilter } = useCockpitFilters();
+  const launchPlans = useLaunchPlans(businessId);
+  const launchCount = launchPlans.data?.items.length ?? 0;
 
   const proposalsQuery = useProposals({ business_id: businessId, lens: "urgency" });
   const killSwitch = useKillSwitch(businessId);
@@ -461,8 +464,11 @@ function BusinessProposalsPage({ businessId }: { businessId: string }) {
       <p className={styles.context}>
         {totalPending > 0
           ? `${totalPending} ${totalPending === 1 ? "cosa" : "cosas"} por decidir${expiringSoonCount > 0 ? ` · ${expiringSoonCount} caduca${expiringSoonCount === 1 ? "" : "n"} hoy` : ""}`
-          : "Nada pendiente ahora mismo"}
+          : launchCount > 0 ? `${launchCount} ${launchCount === 1 ? "plan disponible" : "planes disponibles"} · revisa el detalle antes de aprobar`
+            : launchPlans.isLoading || launchPlans.isError ? "Consultando planes de lanzamiento"
+              : "Nada pendiente ahora mismo"}
       </p>
+      <LaunchPlans businessId={businessId} />
 
       {isStale && !killSwitchEngaged ? <StaleBanner lagMinutes={freshness.data!.lag_minutes} /> : null}
       {actionError ? <p role="alert" className={styles.actionError}>{actionError}</p> : null}
@@ -476,7 +482,7 @@ function BusinessProposalsPage({ businessId }: { businessId: string }) {
           error={proposalsQuery.error}
           onRetry={() => void proposalsQuery.refetch()}
           data={firstPage}
-          isEmpty={() => totalPending === 0}
+          isEmpty={() => totalPending === 0 && launchCount === 0 && !launchPlans.isLoading && !launchPlans.isError}
           emptyTitle={
             noAccounts
               ? "Todavía no hay nada que proponerte"
