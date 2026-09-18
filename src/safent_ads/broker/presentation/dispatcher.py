@@ -101,6 +101,7 @@ from safent_ads.broker.presentation.request_schemas import (
     FetchMetricsRequest,
     GetPlatformAppStatusRequest,
     GoogleReferenceReadRequest,
+    GoogleTagManagerReadRequest,
     HardCapsStatusRequest,
     MetaAdsArchiveRequest,
     MetaGraphGetRequest,
@@ -428,6 +429,18 @@ async def _handle_platform_reference_read(
     return {"rows": list(rows)}
 
 
+async def _handle_google_tag_manager_read(
+    request: GoogleTagManagerReadRequest, runtime: BrokerRuntime
+) -> Any:  # noqa: ANN401 - GTM resources have heterogeneous JSON shapes
+    account_ref = _request_account(request)
+    adapter = cast(GoogleAdsAdapter, runtime.adapters.get(PlatformCode.GOOGLE))
+    return await adapter.read_google_tag_manager(
+        account_ref,
+        resource=request.resource,
+        parent_path=request.parent_path,
+    )
+
+
 async def _handle_meta_graph_get(request: MetaGraphGetRequest, runtime: BrokerRuntime) -> Any:
     """B-3 (TB-4): la politica de `get_meta_graph` (`meta_graph_policy.py`)
     se reaplica AQUI, antes de tocar el adaptador -- el bróker nunca confia
@@ -637,6 +650,7 @@ _HANDLERS: dict[str, tuple[type[BaseModel], _Handler[Any]]] = {
     "run_gaql": (RunGaqlRequest, _handle_run_gaql),
     "meta_reference_read": (MetaReferenceReadRequest, _handle_platform_reference_read),
     "google_reference_read": (GoogleReferenceReadRequest, _handle_platform_reference_read),
+    "google_tag_manager_read": (GoogleTagManagerReadRequest, _handle_google_tag_manager_read),
     "meta_graph_get": (MetaGraphGetRequest, _handle_meta_graph_get),
     "meta_ads_archive": (MetaAdsArchiveRequest, _handle_meta_ads_archive),
     "render_image": (RenderImageRequest, _handle_render_image),

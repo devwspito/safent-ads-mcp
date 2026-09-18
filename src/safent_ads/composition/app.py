@@ -123,6 +123,9 @@ from safent_ads.mcp.infrastructure.broker_competitor_research_port import (
     BrokerCompetitorResearchPort,
     MetaAdLibraryBrokerClient,
 )
+from safent_ads.mcp.infrastructure.broker_google_tag_manager_port import (
+    BrokerGoogleTagManagerReadPort,
+)
 from safent_ads.mcp.infrastructure.broker_graph_passthrough_port import (
     BrokerGraphPassthroughPort,
     GraphPassthroughBrokerClient,
@@ -173,6 +176,7 @@ from safent_ads.mcp.presentation.creative_generation_tools import CreativeGenera
 from safent_ads.mcp.presentation.creative_upload_tools import CreativeUploadToolServices
 from safent_ads.mcp.presentation.dispatcher import DecisionAuditPort, ToolDispatcher
 from safent_ads.mcp.presentation.experiment_tools import ExperimentToolServices
+from safent_ads.mcp.presentation.google_tag_manager_tools import GoogleTagManagerToolServices
 from safent_ads.mcp.presentation.health import build_mcp_health_router
 from safent_ads.mcp.presentation.http import (
     MCP_ENDPOINT_PATH,
@@ -326,6 +330,17 @@ def _build_reference_data_tool_services(container: Container) -> ReferenceDataTo
         container.session_factory,
     )
     return ReferenceDataToolServices(meta=port, google=port)
+
+
+def _build_google_tag_manager_tool_services(
+    container: Container, proposals: ContainerProposalWriteAdapter
+) -> GoogleTagManagerToolServices:
+    return GoogleTagManagerToolServices(
+        read=BrokerGoogleTagManagerReadPort(
+            container.settings.broker_socket_path, container.session_factory
+        ),
+        proposals=proposals,
+    )
 
 
 def _build_passthrough_tool_services(container: Container) -> PassthroughToolServices:
@@ -661,6 +676,7 @@ def _build_mcp_registry_and_dispatcher(
         ),
         package_services=package_services,
         cloudflare_services=_build_cloudflare_tool_services(container, settings),
+        google_tag_manager_services=_build_google_tag_manager_tool_services(container, write_port),
         kit_services=kit_services,
         enabled_google_channels=settings.google_channels_enabled,
         brand_name=settings.brand_name,

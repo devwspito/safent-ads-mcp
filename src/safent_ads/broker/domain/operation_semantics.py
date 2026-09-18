@@ -5,6 +5,11 @@ from decimal import Decimal, InvalidOperation
 
 from safent_ads.accounts.application.ports import WriteIntent, WriteOperation
 from safent_ads.accounts.domain.json_value import JsonValue
+from safent_ads.mcp.domain.google_tag_manager_change import (
+    GTM_CHANGE_OPERATION,
+    GoogleTagManagerChangeError,
+    parse_google_tag_manager_change,
+)
 from safent_ads.mcp.domain.native_write_payload import (
     NativeWritePayloadError,
     validate_native_write_payload,
@@ -124,6 +129,11 @@ def _native_write_matches(intent: WriteIntent) -> bool:
         validate_native_write_payload(intent.valor_propuesto)
     except NativeWritePayloadError:
         return False
+    if intent.parametro == f"native:google:{GTM_CHANGE_OPERATION}":
+        try:
+            parse_google_tag_manager_change(intent.valor_propuesto)
+        except GoogleTagManagerChangeError:
+            return False
     return True
 
 

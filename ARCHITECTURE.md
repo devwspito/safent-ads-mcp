@@ -12,7 +12,7 @@ diseño existe para que esa frase sea cierta incluso con la API comprometida.
 |---|---|---|
 | `ads-api` | REST del panel, servidor MCP, servidor OAuth 2.1, sirve el SPA | La base. **Nunca** las credenciales de plataforma ni el fichero de topes |
 | `ads-worker` | Ciclos de ingesta, señales, reglas, avisos y ejecución | Lo mismo que `ads-api` |
-| `ads-broker` | Único punto de escritura hacia Google Ads y Meta Ads | Las credenciales cifradas y el fichero de topes |
+| `ads-broker` | Único punto de escritura hacia Google Ads, Meta Ads y Google Tag Manager | Las credenciales cifradas y el fichero de topes |
 | `ads-db` | PostgreSQL | — |
 
 El panel es un SPA que `ads-api` sirve desde la misma imagen; no es un
@@ -26,7 +26,7 @@ Cada contexto (`accounts`, `proposals`, `execution`, `metrics`, `signals`,
 - **domain** — reglas de negocio puras. Sin framework, sin SQL, sin HTTP.
 - **application** — casos de uso y **puertos** (interfaces) que necesitan.
 - **infrastructure** — adaptadores: SQL, ficheros, red. El bróker añade
-  `platforms/`: un adaptador por plataforma (Google Ads, Meta) sobre un
+  `platforms/`: adaptadores de proveedor (Google Ads, Meta y Tag Manager) sobre un
   `write_pipeline` común, más los clientes vivos de cada SDK.
 - **presentation** — REST, herramientas MCP, socket del bróker, bot.
 
@@ -57,6 +57,13 @@ ahí: quien pide una escritura nombra la cuenta, nunca lleva el token.
 
 El par de firma está repartido a propósito: la semilla privada en
 `secrets/api.env`, la pública en `secrets/broker.env`. Nunca las dos juntas.
+
+Tag Manager reutiliza la identidad OAuth nativa de Google, pero no se trata
+como un proxy HTTP abierto. El MCP solo admite recursos y acciones de una
+lista cerrada. Crear o editar entidades, crear una versión y publicar esa
+versión pasan por el mismo `diff_hash`, firma, idempotencia y libro del
+bróker que una mutación publicitaria. Publicar es un cambio independiente:
+aprobar un workspace no concede automáticamente publicarlo.
 
 ## Dónde vive cada control
 

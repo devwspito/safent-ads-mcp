@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 
@@ -81,6 +82,12 @@ def test_authorization_url_carries_pkce_and_offline_access() -> None:
     assert "code_challenge_method=S256" in url
     assert "access_type=offline" in url
     assert "prompt=consent" in url
+    scopes = set(parse_qs(urlparse(url).query)["scope"][0].split())
+    assert "https://www.googleapis.com/auth/adwords" in scopes
+    assert "https://www.googleapis.com/auth/tagmanager.readonly" in scopes
+    assert "https://www.googleapis.com/auth/tagmanager.edit.containers" in scopes
+    assert "https://www.googleapis.com/auth/tagmanager.edit.containerversions" in scopes
+    assert "https://www.googleapis.com/auth/tagmanager.publish" in scopes
 
 
 async def test_exchange_code_returns_tokens() -> None:

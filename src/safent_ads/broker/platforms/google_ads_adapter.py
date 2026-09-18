@@ -61,6 +61,7 @@ from safent_ads.broker.platforms.google_reference_reader import (
     GoogleKeywordIdeaClient,
     fetch_keyword_ideas,
 )
+from safent_ads.broker.platforms.google_tag_manager import GoogleTagManagerClient
 from safent_ads.broker.platforms.rate_limits import DailyOperationBudget
 from safent_ads.broker.platforms.write_pipeline import (
     PackageUploadDeniedError,
@@ -79,6 +80,7 @@ _MICROS_PER_CENT: Final = 10_000
 _ENABLED_STATUS: Final = "ENABLED"
 _PAUSED_STATUS: Final = "PAUSED"
 _REMOVED_STATUS: Final = "REMOVED"
+_GTM_PARAMETER: Final = "native:google:gtm_change"
 
 _RESOURCE_NAME_CUSTOMER_ID_PATTERN: Final = re.compile(r"^customers/(\d+)/")
 # GAQL no tiene API de parametros vinculados (bind parameters); todo valor
@@ -236,6 +238,7 @@ class GoogleAdsAdapter:
         templates: GoogleAdsQueryTemplates | None = None,
         keyword_idea_client: GoogleKeywordIdeaClient | None = None,
         asset_upload_client: GoogleAssetUploadClient | None = None,
+        tag_manager_client: GoogleTagManagerClient | None = None,
     ) -> None:
         self._config = config
         self._search_client = search_client
@@ -262,6 +265,7 @@ class GoogleAdsAdapter:
         # `upload_asset` falla cerrado con `PlatformCapabilityNotImplementedError`
         # en ese caso, nunca intenta mutar sin cliente.
         self._asset_upload_client = asset_upload_client
+        self._tag_manager_client = tag_manager_client
 
     async def fetch_account_inventory(self, account_ref: AccountRef) -> Sequence[AdEntitySnapshot]:
         customer_id = account_ref.external_account_id
@@ -412,6 +416,10 @@ class GoogleAdsAdapter:
                 create=self._search_client.create_paused_child,
                 consume_rate=self._daily_budget.try_consume,
             )
+        if intent.operation is WriteOperation.NATIVE_WRITE and (
+            intent.parametro != _GTM_PARAMETER or self._tag_manager_client is None
+        ):
+            return denial_outcome(WriteDenialCode.OPERATION_NOT_SUPPORTED)
         if intent.operation not in _SUPPORTED_OPERATIONS:
             return denial_outcome(WriteDenialCode.OPERATION_NOT_SUPPORTED)
         replay = await pipeline.begin_admitted_write(key, intent, authorization, customer_id, now)
@@ -479,6 +487,16 @@ class GoogleAdsAdapter:
     async def _mutate(
         self, operation: WriteOperation, customer_id: str, resource_name: str, intent: WriteIntent
     ) -> str:
+        if operation is WriteOperation.NATIVE_WRITE:
+            if intent.parametro != _GTM_PARAMETER or self._tag_manager_client is None:
+                raise PlatformCapabilityNotImplementedError("escritura nativa Google no soportada")
+            if not isinstance(intent.valor_propuesto, Mapping):
+                raise GoogleAdsAdapterError("cambio GTM invalido")
+            result = await self._tag_manager_client.apply_change(
+                customer_id, intent.valor_propuesto
+            )
+            request_id = result.get("path") or result.get("containerVersionId")
+            return str(request_id or "gtm_change_applied")
         if operation in _BUDGET_OPERATIONS:
             return await self._mutate_budget(customer_id, resource_name, intent)
         status = _STATUS_BY_OPERATION.get(operation)
@@ -558,6 +576,23 @@ class GoogleAdsAdapter:
             seed_keywords=tuple(str(keyword) for keyword in arguments["seed_keywords"]),
             geo_target=str(arguments["geo_target"]),
             language=str(arguments["language"]),
+        )
+
+    async def read_google_tag_manager(
+        self,
+        account_ref: AccountRef,
+        *,
+        resource: str,
+        parent_path: str | None,
+    ) -> Mapping[str, Any]:
+        if self._tag_manager_client is None:
+            raise PlatformCapabilityNotImplementedError(
+                "Google Tag Manager no esta cableado en este despliegue"
+            )
+        return await self._tag_manager_client.read(
+            account_ref.external_account_id,
+            resource=resource,
+            parent_path=parent_path,
         )
 
     async def _run_gaql(
@@ -801,7 +836,12 @@ _STATUS_BY_OPERATION: Final[dict[WriteOperation, str]] = {
     WriteOperation.DELETE: _REMOVED_STATUS,
 }
 _SUPPORTED_OPERATIONS: Final = (
-    _BUDGET_OPERATIONS | frozenset(_STATUS_BY_OPERATION) | {WriteOperation.ADD_NEGATIVE_KEYWORD}
+    _BUDGET_OPERATIONS
+    | frozenset(_STATUS_BY_OPERATION)
+    | {
+        WriteOperation.ADD_NEGATIVE_KEYWORD,
+        WriteOperation.NATIVE_WRITE,
+    }
 )
 
 

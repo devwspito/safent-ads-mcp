@@ -75,11 +75,12 @@ async def test_denies_host_outside_allow_list() -> None:
         await assert_egress_allowed("evil.example.com", resolver=_resolver(["8.8.8.8"]))
 
 
-def test_allow_list_matches_native_and_fixed_managed_ads_hosts_only() -> None:
+def test_allow_list_matches_native_ads_tag_manager_and_managed_hosts_only() -> None:
     assert ALLOWED_EGRESS_HOSTS == {
         "graph.facebook.com",
         "mcp.facebook.com",
         "googleads.googleapis.com",
+        "tagmanager.googleapis.com",
         "oauth2.googleapis.com",
         "backend.composio.dev",
     }

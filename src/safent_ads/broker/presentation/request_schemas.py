@@ -251,6 +251,26 @@ class GoogleReferenceReadRequest(PlatformReferenceReadRequest):
     platform: Literal[PlatformCode.GOOGLE]
 
 
+class GoogleTagManagerReadRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    op: Literal["google_tag_manager_read"]
+    platform: Literal[PlatformCode.GOOGLE]
+    external_account_id: str
+    business_id: str
+    connection_id: str
+    resource: Literal[
+        "accounts",
+        "containers",
+        "workspaces",
+        "tags",
+        "triggers",
+        "variables",
+        "version_headers",
+    ]
+    parent_path: str | None = Field(default=None, max_length=300)
+
+
 class MetaGraphGetRequest(BaseModel):
     """R5 (historia 19): `get_meta_graph`, paso a traves de lectura de
     Meta. La lista blanca de aristas/campos/params vive en dominio puro

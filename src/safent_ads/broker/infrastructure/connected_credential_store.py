@@ -45,6 +45,7 @@ class ConnectedCredentialStore:
                 external_account_id=external_account_id,
                 login_customer_id=binding.login_customer_id,
                 composio=binding,
+                scopes=record.scopes,
             )
         if platform == PlatformCode.GOOGLE:
             app = self._store.get_google_app_credentials()
@@ -53,9 +54,13 @@ class ConnectedCredentialStore:
                 external_account_id=external_account_id,
                 refresh_token=record.token,
                 login_customer_id=app.login_customer_id if app else self._login_customer_id,
+                scopes=record.scopes,
             )
         return PlatformCredential(
-            platform=platform, external_account_id=external_account_id, access_token=record.token
+            platform=platform,
+            external_account_id=external_account_id,
+            access_token=record.token,
+            scopes=record.scopes,
         )
 
     def resolve_write_scope(self, intent: WriteIntent, external_account_id: str) -> LedgerScope:
