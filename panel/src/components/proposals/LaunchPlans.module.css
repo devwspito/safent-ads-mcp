@@ -11,7 +11,7 @@
 .detailLink { font-weight: var(--fw-medium); }
 .backLink { display: inline-flex; align-items: center; min-height: var(--touch-min); margin-bottom: var(--sp-2); }
 .header { display: flex; gap: var(--sp-6); justify-content: space-between; align-items: start; }
-.header h2 { margin: var(--sp-2) 0; font-size: var(--fs-xl); }
+.header h2 { margin: var(--sp-2) 0; font-size: var(--fs-xl); line-height: var(--lh-xl); }
 .header p { max-width: 750px; line-height: 1.6; color: var(--color-text-secondary); }
 .eyebrow { font-size: var(--fs-2xs); text-transform: uppercase; letter-spacing: var(--tracking-caps); color: var(--color-text-secondary); }
 .link { display: inline-block; padding: var(--sp-3) var(--sp-4); border: 1px solid var(--color-border-default); border-radius: var(--radius-md); white-space: nowrap; color: var(--color-accent-text); }
