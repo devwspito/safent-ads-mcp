@@ -20,8 +20,10 @@ import { portfolioSignalsHandlers } from "./handlers/portfolioSignals";
 import { proposalsHandlers } from "./handlers/proposals";
 import { rulesHandlers } from "./handlers/rules";
 import { settingsHandlers } from "./handlers/settings";
+import { storeApiHandlers } from "./handlers/storeApi";
 
 export const handlers = [
+  ...storeApiHandlers,
   ...authHandlers,
   ...cockpitHandlers,
   ...portfolioSignalsHandlers,

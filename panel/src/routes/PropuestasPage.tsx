@@ -34,6 +34,7 @@ import { formatRelativeTime, staleDataLabel, weekdayDayLabel } from "@/utils/tim
 import styles from "./PropuestasPage.module.css";
 import { UnconfirmedExecutions } from "@/components/proposals/UnconfirmedExecutions";
 import { campaignPlanReady } from "@/api/schemas/campaignCreation";
+import { LaunchPlans } from "@/components/proposals/LaunchPlans";
 
 /** `phrase` viene del servidor en el 428 (rest-api.md §Propuestas): nunca se inventa en el cliente. */
 type PendingDialog =
@@ -64,7 +65,7 @@ export function PropuestasPage() {
   const { data: me } = useMe();
   const { businessId } = useBusinessFilter(me?.businesses);
   // Business changes discard selections, dialogs and late results from the old inbox.
-  return <BusinessProposalsPage key={businessId} businessId={businessId} />;
+  return <><LaunchPlans businessId={businessId} /><BusinessProposalsPage key={businessId} businessId={businessId} /></>;
 }
 
 function BusinessProposalsPage({ businessId }: { businessId: string }) {

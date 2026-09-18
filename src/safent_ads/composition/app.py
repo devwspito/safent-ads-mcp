@@ -115,6 +115,10 @@ from safent_ads.integrations.cloudflare import (
     build_cloudflare_connection_router,
     build_request_scoped_cloudflare_connection_store,
 )
+from safent_ads.integrations.store_api.rest import build_store_api_router
+from safent_ads.integrations.store_api.service import StoreApiService
+from safent_ads.launches.approval import LaunchApprovalStore
+from safent_ads.launches.review import build_launch_review_router
 from safent_ads.logging_setup import configure_logging
 from safent_ads.mcp.application.caller_scope import CallerScopeResolverPort, Permission
 from safent_ads.mcp.application.creative_upload_port import CreativeUploadPort
@@ -444,6 +448,29 @@ def _include_cloudflare_connection_router(
     )
 
 
+def _build_store_api_service(container: Container, settings: ApiSettings) -> StoreApiService:
+    return StoreApiService(
+        container.session_factory,
+        settings.totp_enc_key.get_secret_value(),
+        settings.store_api_base_url,
+        settings.store_api_egress_ip,
+    )
+
+
+def _include_business_integrations(
+    app: FastAPI, container: Container, settings: ApiSettings
+) -> None:
+    _include_cloudflare_connection_router(app, container, settings)
+    app.include_router(build_store_api_router(_build_store_api_service(container, settings)))
+    app.include_router(
+        build_launch_review_router(
+            settings.kit_dir,
+            settings.creative_asset_storage_dir,
+            LaunchApprovalStore(container.session_factory),
+        )
+    )
+
+
 def _build_cloudflare_tool_services(
     container: Container, settings: ApiSettings
 ) -> CloudflareToolServices:
@@ -676,6 +703,7 @@ def _build_mcp_registry_and_dispatcher(
         ),
         package_services=package_services,
         cloudflare_services=_build_cloudflare_tool_services(container, settings),
+        store_api_service=_build_store_api_service(container, settings),
         google_tag_manager_services=_build_google_tag_manager_tool_services(container, write_port),
         kit_services=kit_services,
         enabled_google_channels=settings.google_channels_enabled,
@@ -1193,9 +1221,7 @@ def _route_oauth_endpoints(
     "Cableado exacto"). Se registran justo despues de `_route_mcp_transport`
     y antes de `_mount_panel_spa`/`harden_api` (C-52)."""
     app.router.routes.extend(
-        build_oauth_routes(
-            provider, public_base_url=public_base_url, resource_name=resource_name
-        )
+        build_oauth_routes(provider, public_base_url=public_base_url, resource_name=resource_name)
     )
 
 
@@ -1625,7 +1651,7 @@ def create_app(
     # --- end spec 008 fase D ---
 
     # --- lane: cloudflare-ui (006, owner decision) ---
-    _include_cloudflare_connection_router(app, container, resolved_settings)
+    _include_business_integrations(app, container, resolved_settings)
     # --- end lane: cloudflare-ui ---
 
     # --- lane: onboarding (029 T022) ---
@@ -1742,9 +1768,7 @@ def _build_lifespan(
             # autorizar. No las borra ni las arregla: avisa una vez. En una
             # tarea propia -- es informativa, y dar por listo el servicio no
             # puede esperar a una consulta.
-            audit_task = asyncio.create_task(
-                audit_client_redirect_uris(container.session_factory)
-            )
+            audit_task = asyncio.create_task(audit_client_redirect_uris(container.session_factory))
             try:
                 yield
             finally:

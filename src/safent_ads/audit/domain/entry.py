@@ -90,6 +90,8 @@ class DecisionKind(StrEnum):
     # `account_id`/`zone_count`, nunca el token.
     CLOUDFLARE_CONNECTED = "cloudflare_connected"
     CLOUDFLARE_DISCONNECTED = "cloudflare_disconnected"
+    STORE_API_CONNECTED = "store_api_connected"
+    LAUNCH_PLAN_REVIEWED = "launch_plan_reviewed"
     # spec 008 T031 (auditoria doble de los topes desde el panel): el
     # broker ya deja `broker_account_caps_set`/`_denied` en SU registro --
     # la traza que un compromiso de `ads-api` no puede borrar --; estas dos

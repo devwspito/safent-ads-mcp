@@ -503,6 +503,10 @@ class ApiSettings(CommonSettings):
     def _parse_mcp_extra_allowed_hosts(cls, value: object) -> object:
         return _parse_comma_or_json_string_list(value)
 
+    # Fixed read-only catalogue origin; credentials are entered in the panel.
+    store_api_base_url: str = ""
+    store_api_egress_ip: str = ""
+
     # --- integrations/cloudflare (Anadido del dueno, 14-sep): conector propio
     # contra la API v4 de Cloudflare -- "MCP=acceso+control+auditoria, no
     # coaching". `None` por defecto (igual que `OPENAI_API_KEY`/`FAL_API_KEY`):
