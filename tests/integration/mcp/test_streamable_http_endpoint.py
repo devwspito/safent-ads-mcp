@@ -118,7 +118,7 @@ async def test_view_permission_sees_only_read_tools_never_propose() -> None:
     assert response.status_code == 200, response.text
     assert "mcp-session-id" not in response.headers
     names = {tool["name"] for tool in response.json()["result"]["tools"]}
-    assert len(names) == 75
+    assert len(names) == 76
     assert not any(name.startswith("propose_") for name in names)
 
 
@@ -129,7 +129,7 @@ async def test_propose_permission_sees_read_and_proposal_tools() -> None:
 
     assert response.status_code == 200, response.text
     names = {tool["name"] for tool in response.json()["result"]["tools"]}
-    assert len(names) == 98
+    assert len(names) == 100
     assert "propose_budget_change" in names
 
 
@@ -260,9 +260,9 @@ async def test_single_owner_mode_lists_exactly_the_approve_registry(
 
     assert response.status_code == 200, response.text
     names = {tool["name"] for tool in response.json()["result"]["tools"]}
-    # `aprobar` (97 de `proponer` + las 2 `CONNECTION_WRITE`, A5/Anadido del
+    # `aprobar` (100 de `proponer` + las 2 `CONNECTION_WRITE`, A5/Anadido del
     # dueno): el modo de un solo propietario ve el catalogo COMPLETO.
-    assert len(names) == 100
+    assert len(names) == 102
     assert "propose_budget_change" in names
     assert "connect_platform_account" in names
 

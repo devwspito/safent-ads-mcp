@@ -143,6 +143,26 @@ class _FakeSearchClient:
         return f"{ad_group_resource_name}~1"
 
 
+class _FakeTagManagerClient:
+    def __init__(self) -> None:
+        self.changes: list[tuple[str, Mapping[str, object]]] = []
+
+    async def read(
+        self,
+        external_account_id: str,  # noqa: ARG002 - protocol shape
+        *,
+        resource: str,  # noqa: ARG002 - protocol shape
+        parent_path: str | None,  # noqa: ARG002 - protocol shape
+    ) -> Mapping[str, Any]:
+        return {}
+
+    async def apply_change(
+        self, external_account_id: str, payload: Mapping[str, object]
+    ) -> Mapping[str, Any]:
+        self.changes.append((external_account_id, payload))
+        return {"path": "accounts/1/containers/2/workspaces/3"}
+
+
 def _config(**overrides: object) -> GoogleAdsAdapterConfig:
     defaults: dict[str, object] = {
         "client_id": "client-id",
@@ -630,6 +650,39 @@ async def test_execute_write_pauses_a_campaign(tmp_path: Path) -> None:
     assert client.status_mutations == [
         (_CUSTOMER_ID, _CAMPAIGN_RESOURCE, EntityLevel.CAMPAIGN, "PAUSED")
     ]
+
+
+async def test_execute_write_applies_approved_gtm_change_through_pipeline(tmp_path: Path) -> None:
+    signer, verifier = _keypair()
+    client = _campaign_client()
+    tag_manager = _FakeTagManagerClient()
+    adapter = GoogleAdsAdapter(
+        _config(),
+        client,
+        FixedClock(_NOW),
+        write_pipeline=_pipeline(tmp_path, verifier),
+        tag_manager_client=tag_manager,
+    )
+    entity_ref = EntityRef(PlatformCode.GOOGLE, EntityLevel.CAMPAIGN, _CAMPAIGN_RESOURCE)
+    payload = {
+        "action": "create_workspace",
+        "parent_path": "accounts/1/containers/2",
+        "body_encoded": base64.b64encode(b'{"name":"Friendog release"}').decode(),
+    }
+    intent = _intent(
+        entity_ref,
+        parametro="native:google:gtm_change",
+        before=None,
+        after=payload,
+        operation=WriteOperation.NATIVE_WRITE,
+    )
+    authorization = _authorization(signer, diff_hash=intent.diff_hash)
+
+    outcome = await adapter.execute_write(intent, authorization, IdempotencyKey("gtm-key-1"))
+
+    assert outcome.outcome == "SUCCEEDED"
+    assert outcome.platform_request_id == "accounts/1/containers/2/workspaces/3"
+    assert tag_manager.changes == [(_CUSTOMER_ID, payload)]
 
 
 async def test_execute_write_deletes_a_campaign(tmp_path: Path) -> None:

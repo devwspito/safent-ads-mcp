@@ -1,5 +1,5 @@
-"""`GoogleOAuthAdapter`: OAuth 2.0 + PKCE contra Google, scope
-`https://www.googleapis.com/auth/adwords`, acceso offline
+"""`GoogleOAuthAdapter`: OAuth 2.0 + PKCE contra Google, scopes de Ads y
+Tag Manager, acceso offline
 (research/ads-platforms-and-mcps.md §3). Tras el canje, descubre las
 cuentas accesibles con `customers:listAccessibleCustomers` y su
 `currency`/`time_zone` con una consulta GAQL de una sola fila por cuenta —
@@ -24,7 +24,14 @@ _AUTHORIZATION_ENDPOINT = "https://accounts.google.com/o/oauth2/v2/auth"
 _TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token"  # noqa: S105 - endpoint, no secreto
 _LIST_CUSTOMERS_ENDPOINT = "https://googleads.googleapis.com/v25/customers:listAccessibleCustomers"
 _SEARCH_ENDPOINT = "https://googleads.googleapis.com/v25/customers/{customer_id}/googleAds:search"
-_SCOPE = "https://www.googleapis.com/auth/adwords"
+_SCOPES = (
+    "https://www.googleapis.com/auth/adwords",
+    "https://www.googleapis.com/auth/tagmanager.readonly",
+    "https://www.googleapis.com/auth/tagmanager.edit.containers",
+    "https://www.googleapis.com/auth/tagmanager.edit.containerversions",
+    "https://www.googleapis.com/auth/tagmanager.publish",
+)
+_SCOPE = " ".join(_SCOPES)
 _CUSTOMER_QUERY = (
     "SELECT customer.currency_code, customer.time_zone, customer.descriptive_name "
     "FROM customer LIMIT 1"

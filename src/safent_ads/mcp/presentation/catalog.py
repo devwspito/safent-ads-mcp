@@ -60,6 +60,10 @@ from safent_ads.mcp.presentation.experiment_tools import (
     ExperimentToolServices,
     build_experiment_tool_definitions,
 )
+from safent_ads.mcp.presentation.google_tag_manager_tools import (
+    GoogleTagManagerToolServices,
+    build_google_tag_manager_tool_definitions,
+)
 from safent_ads.mcp.presentation.handlers import build_handlers
 from safent_ads.mcp.presentation.kit_tools import KitToolServices, build_kit_tool_definitions
 from safent_ads.mcp.presentation.native_ads_tools import (
@@ -458,6 +462,7 @@ def build_default_registry(
     package_services: PackageToolServices | None = None,
     kit_services: KitToolServices | None = None,
     cloudflare_services: CloudflareToolServices | None = None,
+    google_tag_manager_services: GoogleTagManagerToolServices | None = None,
     enabled_google_channels: frozenset[GoogleAdvertisingChannelType] = frozenset(
         {GoogleAdvertisingChannelType.SEARCH}
     ),
@@ -534,6 +539,8 @@ def build_default_registry(
     # parametro a esa cadena -- una linea, mismo criterio de aislamiento.
     if cloudflare_services is not None:
         definitions.extend(build_cloudflare_tool_definitions(cloudflare_services))
+    if google_tag_manager_services is not None:
+        definitions.extend(build_google_tag_manager_tool_definitions(google_tag_manager_services))
     return ToolRegistry(definitions)
 
 

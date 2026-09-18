@@ -15,7 +15,8 @@ Nada se publica ni se gasta sin aprobación humana en el panel.
 - Servidor MCP con tres niveles de permiso: ver, proponer, aprobar
   (`ads-view`, `ads-propose`, `ads-approve`).
 - Panel de aprobación con registro de decisiones encadenado.
-- Bróker: el único proceso que ve las credenciales y el único que escribe.
+- Bróker: el único proceso que ve las credenciales y el único que escribe en
+  Google Ads, Meta Ads o Google Tag Manager.
 - Servidor OAuth 2.1 propio para autorizar agentes desde el navegador.
 - Topes duros por cuenta: sin tope, no se escribe.
 - Cero credenciales de fábrica. Todo lo de terceros lo pones tú.
@@ -215,6 +216,22 @@ https://ads.tudominio.com/mcp`, y luego autorizas igual.
 
 Comprueba que responde pidiéndoselo al agente: «usa solo las herramientas
 `mcp__safent-ads__*` y lista mis negocios».
+
+### Google Tag Manager
+
+La conexión nativa de Google incluye permisos de Google Ads y de Tag Manager.
+El MCP puede inventariar cuentas, contenedores, workspaces, etiquetas,
+activadores, variables y versiones con `get_google_tag_manager`. Los cambios
+se crean con `propose_google_tag_manager_change`: nunca escribe al proponer.
+Después de la aprobación, crear/editar el workspace, crear una versión y
+publicarla son operaciones auditadas; publicar una versión es siempre una
+propuesta separada y puede fijar su `fingerprint` para detectar deriva.
+
+Una cuenta Google conectada antes de esta función solo tiene el alcance de
+Ads. Hay que reconectarla una vez desde **Conexiones** para conceder los
+alcances de Tag Manager. El MCP no admite esta ruta con una conexión Google
+delegada por Composio: necesita el OAuth nativo, porque el token sigue
+residiendo exclusivamente en el bróker.
 
 Si OAuth no está disponible (arranque roto, CI, pérdida del segundo factor),
 enciende el bearer de dueño en el servidor: en `secrets/api.env`,

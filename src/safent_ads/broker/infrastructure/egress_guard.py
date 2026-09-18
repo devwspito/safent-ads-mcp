@@ -46,6 +46,7 @@ ALLOWED_EGRESS_HOSTS: Final = frozenset(
         "graph.facebook.com",
         "mcp.facebook.com",
         "googleads.googleapis.com",
+        "tagmanager.googleapis.com",
         "oauth2.googleapis.com",
         "backend.composio.dev",
     }

@@ -64,6 +64,7 @@ class PlatformCredential:
     login_customer_id: str | None = None
     access_token: str | None = field(default=None, repr=False)
     composio: ComposioAccountBinding | None = field(default=None, repr=False)
+    scopes: tuple[str, ...] = ()
 
 
 class CredentialStorePort(Protocol):

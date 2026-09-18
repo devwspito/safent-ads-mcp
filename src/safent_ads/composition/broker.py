@@ -121,6 +121,7 @@ from safent_ads.broker.platforms.google_ads_adapter import (
     GoogleAdsQueryTemplates,
 )
 from safent_ads.broker.platforms.google_oauth_adapter import GoogleOAuthAdapterConfig
+from safent_ads.broker.platforms.google_tag_manager import LiveGoogleTagManagerClient
 from safent_ads.broker.platforms.live_google_ads_client import (
     LiveGoogleAdsSearchClient,
     LiveGoogleAssetUploadClient,
@@ -171,6 +172,7 @@ _SOCKET_GROUP_GID = 10003
 _SOCKET_MODE = 0o660
 
 _GOOGLE_ADS_EGRESS_HOST = "googleads.googleapis.com"
+_GOOGLE_TAG_MANAGER_EGRESS_HOST = "tagmanager.googleapis.com"
 _META_GRAPH_EGRESS_HOST = "graph.facebook.com"
 
 # M-3 (revision de seguridad 0.2.22): `render_image` devuelve una imagen en
@@ -240,6 +242,11 @@ def _build_google_adapter(
         # `PlatformCapabilityNotImplementedError` incluso con credencial de
         # Google conectada.
         asset_upload_client=LiveGoogleAssetUploadClient(search_client),
+        tag_manager_client=LiveGoogleTagManagerClient(
+            client_id=client_id,
+            client_secret=client_secret,
+            credential_store=credential_store,
+        ),
     )
 
 
@@ -394,6 +401,8 @@ async def _build_registry(
             credential_store=credential_store,
         )
 
+    google_egress_allowed = await _egress_allowed(_GOOGLE_ADS_EGRESS_HOST, "google")
+    await _egress_allowed(_GOOGLE_TAG_MANAGER_EGRESS_HOST, "google_tag_manager")
     adapters = DynamicPlatformAdapterRegistry(
         store=store,
         google_factory=lambda secrets: _build_google_adapter(
@@ -409,7 +418,7 @@ async def _build_registry(
         ),
         google_fallback=_google_app_secrets_fallback(settings),
         meta_fallback=_meta_app_secrets_fallback(settings),
-        google_egress_allowed=await _egress_allowed(_GOOGLE_ADS_EGRESS_HOST, "google"),
+        google_egress_allowed=google_egress_allowed,
         meta_egress_allowed=await _egress_allowed(_META_GRAPH_EGRESS_HOST, "meta"),
         managed_transport_enabled=lambda: (
             composio_transport is not None
