@@ -21,6 +21,10 @@ from urllib.parse import urlsplit
 import httpx
 
 from safent_ads.runtime.contracts import RuntimeResult
+from safent_ads.shared.net.safe_egress import (
+    BlockedEgressAddressError,
+    build_pinned_async_client,
+)
 
 POLL_SECONDS = 30
 HEARTBEAT_SECONDS = 20
@@ -226,6 +230,16 @@ def read_result(directory: Path, runtime: str, returncode: int | None) -> Runtim
         return failed_result("La respuesta del runtime no cumple el contrato de preparación.")
 
 
+def resolve_executable(args: argparse.Namespace) -> str:
+    executable = args.executable or shutil.which(args.runtime)
+    if not executable and args.runtime == "codex":
+        bundled = Path("/Applications/ChatGPT.app/Contents/Resources/codex")
+        executable = str(bundled) if bundled.is_file() else None
+    if not executable:
+        raise SystemExit("Instala y autentica el runtime antes de iniciar el conector.")
+    return str(executable)
+
+
 async def serve(args: argparse.Namespace) -> None:
     token = os.environ.get("SAFENT_RUNTIME_TOKEN", "")
     if not token:
@@ -240,23 +254,18 @@ async def serve(args: argparse.Namespace) -> None:
         or url.fragment
     ):
         raise SystemExit("Usa la URL HTTPS del panel, sin credenciales ni parámetros.")
-    executable = args.executable or shutil.which(args.runtime)
-    if not executable and args.runtime == "codex":
-        bundled = Path("/Applications/ChatGPT.app/Contents/Resources/codex")
-        executable = str(bundled) if bundled.is_file() else None
-    if not executable:
-        raise SystemExit("Instala y autentica el runtime antes de iniciar el conector.")
+    executable = resolve_executable(args)
     print(
         "Conector activo. Sólo preparación; sin publicación ni gasto. Ctrl+C para detener.",
         flush=True,
     )
-    async with httpx.AsyncClient(
-        base_url=args.url.rstrip("/") + "/",
-        headers={"Authorization": "Bearer " + token},
+    async with build_pinned_async_client(
+        allowed_hosts=frozenset({url.hostname}),
         timeout=30,
-        follow_redirects=False,
         trust_env=False,
     ) as client:
+        client.base_url = args.url.rstrip("/") + "/"
+        client.headers["Authorization"] = "Bearer " + token
         while True:
             try:
                 job = (await post(client, "claim", {}))["job"]
@@ -287,6 +296,10 @@ async def serve(args: argparse.Namespace) -> None:
                 print(
                     "Sin conexión con el panel; el encargo se recuperará por su lease.", flush=True
                 )
+            except BlockedEgressAddressError:
+                raise SystemExit(
+                    "Destino bloqueado: el panel debe usar un host HTTPS público."
+                ) from None
             except OSError:
                 raise SystemExit(
                     "No se pudo ejecutar el runtime; comprueba --executable."

@@ -1,3 +1,4 @@
+import argparse
 import asyncio
 import json
 import sys
@@ -23,6 +24,7 @@ from safent_ads.runtime.bridge import (
     runtime_command,
     runtime_environment,
     safe_job,
+    serve,
 )
 from safent_ads.runtime.contracts import RuntimeResult
 
@@ -211,3 +213,29 @@ async def test_runtime_coordination_enforces_oauth_scope_and_business(denial):
             caller_scope=caller,
         )
     store.claim.assert_not_called()
+
+
+async def test_bridge_uses_pinned_host_and_never_follows_redirects(monkeypatch):
+    monkeypatch.setenv("SAFENT_RUNTIME_TOKEN", "synthetic-local-credential")
+    requests = []
+
+    def transport(request):
+        requests.append(request)
+        return httpx.Response(200, json={"job": None})
+
+    def client_factory(**kwargs):
+        assert kwargs == {
+            "allowed_hosts": frozenset({"example.com"}),
+            "timeout": 30,
+            "trust_env": False,
+        }
+        return httpx.AsyncClient(transport=httpx.MockTransport(transport), follow_redirects=False)
+
+    monkeypatch.setattr("safent_ads.runtime.bridge.build_pinned_async_client", client_factory)
+    await serve(
+        argparse.Namespace(
+            url="https://example.com/ads", runtime="codex", executable="fake", once=True, timeout=60
+        )
+    )
+    assert str(requests[0].url) == "https://example.com/ads/runtime/v1/claim"
+    assert requests[0].headers["Authorization"].startswith("Bearer ")
