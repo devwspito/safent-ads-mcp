@@ -6,6 +6,8 @@ import { LoginPage } from "@/routes/LoginPage";
 import { getAdsBasePath } from "@/utils/basePath";
 
 const PropuestasPage = lazy(() => import("@/routes/PropuestasPage").then((m) => ({ default: m.PropuestasPage })));
+const WorkspacesPage = lazy(() => import("@/routes/WorkspacesPage").then(m => ({ default: m.WorkspacesPage })));
+const WorkspacePage = lazy(() => import("@/routes/WorkspacesPage").then(m => ({ default: m.WorkspacePage })));
 const LaunchProposalPage = lazy(() => import("@/routes/LaunchProposalPage").then((m) => ({ default: m.LaunchProposalPage })));
 const RuntimePairingPage = lazy(() => import("@/routes/RuntimePairingPage").then((m) => ({ default: m.RuntimePairingPage })));
 const PackagePreviewIndexPage = lazy(() => import("@/routes/PackagePreviewPage").then((m) => ({ default: m.PackagePreviewIndexPage })));
@@ -39,6 +41,8 @@ export function App() {
           <Route path="/oauth/autorizar" element={<ConsentimientoPage />} />
           <Route path="/runtime/vincular" element={<RuntimePairingPage />} />
           <Route element={<AppShell />}>
+            <Route path="/trabajo" element={<WorkspacesPage />} />
+            <Route path="/trabajo/:id" element={<WorkspacePage />} />
             <Route path="/propuestas" element={<PropuestasPage />} />
             <Route path="/propuestas/lanzamiento/:slug" element={<LaunchProposalPage />} />
             <Route path="/propuestas/historial" element={<RegistroPage />} />
@@ -61,7 +65,7 @@ export function App() {
           <Route path="/creatividades" element={<Navigate to="/campanas" replace />} />
           <Route path="/registro" element={<Navigate to="/propuestas/historial" replace />} />
 
-          <Route path="/" element={<Navigate to="/propuestas" replace />} />
+          <Route path="/" element={<Navigate to="/trabajo" replace />} />
           <Route path="*" element={<Navigate to="/propuestas" replace />} />
         </Routes>
       </Suspense>

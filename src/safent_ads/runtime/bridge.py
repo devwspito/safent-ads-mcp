@@ -46,7 +46,11 @@ y expected_draft_revision actual; no borres campos conocidos al reintentar.
 Devuelve campaign incluso si está incompleto, junto con outcome=blocked y los bloqueos.
 prepared sólo significa borrador de planificación completo, nunca campaña creada en
 Meta/Google. Distingue pendientes de preparación de requisitos para activar el evento.
-No des por confirmados los datos pendientes que figuran en el plan.
+El workspace adjunto contiene el contexto compartido actualizado. Usa sus campos
+explícitos para resolver datos antiguos del plan; nunca deduzcas autorizaciones.
+Los vídeos, WhatsApp y permisos de página son pendientes de sus respectivos pasos,
+no impedimentos para preparar una propuesta de contenedor de campaña en pausa.
+No des por confirmados datos que sigan pendientes en el contexto actualizado.
 """
 
 
@@ -130,7 +134,8 @@ def runtime_environment() -> dict[str, str]:
 
 
 def safe_job(job: dict[str, Any]) -> dict[str, Any]:
-    return {key: job[key] for key in ("id", "context", "existing_drafts")}
+    keys = ("id", "context", "existing_drafts", "workspace")
+    return {key: job[key] for key in keys if key in job}
 
 
 def failed_result(reason: str) -> RuntimeResult:

@@ -76,7 +76,12 @@ _MAX_MCP_BODY_BYTES = 13_000_000
 _DEFAULT_BRAND_NAME = "tu negocio"
 _DEFAULT_PANEL_HOST = "tu dominio"
 _MCP_INSTRUCTIONS_TEMPLATE = """\
-Sistema de anuncios de {brand_name}: herramientas; usa tu stack nativo para lo demás.
+Sistema de anuncios de {brand_name}. Contexto compartido: list_workspaces ->
+get_workspace; guarda cambios con propose_workspace/propose_workspace_campaign.
+propose_workspace_creation crea una propuesta PAUSED, no una campaña remota.
+La aprobación humana del diff autoriza su ejecución; verifica propuesta y recibo.
+No confundas presupuesto planificado con límite aplicado ni creación con activación.
+Panel, Codex y Claude comparten estado; no reconstruyas el proyecto desde el chat.
 Encargos del panel: list_runtime_jobs -> claim_runtime_job -> heartbeat_runtime_job
 -> propose_runtime_result. Sólo preparación; no autoriza gasto. Un conector activo
 es necesario para recibir encargos sin un mensaje del usuario.

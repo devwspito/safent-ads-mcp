@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { describeApiError } from "@/utils/apiError";
 import { ApiRequestError } from "@/api/client";
 import { useMe } from "@/api/queries/auth";
@@ -70,6 +70,8 @@ export function PropuestasPage() {
 }
 
 function BusinessProposalsPage({ businessId }: { businessId: string }) {
+  const [searchParams] = useSearchParams();
+  const requestedProposal = searchParams.get("proposal_id");
   const { filters, setFilter } = useCockpitFilters();
   const launchPlans = useLaunchPlans(businessId);
   const launchCount = launchPlans.data?.items.length ?? 0;
@@ -98,8 +100,8 @@ function BusinessProposalsPage({ businessId }: { businessId: string }) {
     },
   });
 
-  const [focusedProposalId, setFocusedProposalId] = useState<string | null>(null);
-  const [expandedProposalId, setExpandedProposalId] = useState<string | null>(null);
+  const [focusedProposalId, setFocusedProposalId] = useState<string | null>(requestedProposal);
+  const [expandedProposalId, setExpandedProposalId] = useState<string | null>(requestedProposal);
   const expandedDetail = useProposalDetail(expandedProposalId);
   const [puedeEsperarExpanded, setPuedeEsperarExpanded] = useState(false);
   const [dialog, setDialog] = useState<PendingDialog | null>(null);
@@ -126,8 +128,8 @@ function BusinessProposalsPage({ businessId }: { businessId: string }) {
 
   useEffect(() => {
     setDialog(null);
-    setExpandedProposalId(null);
-    setFocusedProposalId(null);
+    setExpandedProposalId(requestedProposal);
+    setFocusedProposalId(requestedProposal);
     setActionError(null);
     setNotice(null);
     setEverHadPending(false);
@@ -137,7 +139,7 @@ function BusinessProposalsPage({ businessId }: { businessId: string }) {
     setPostponed([]);
     setPostponedExpanded(false);
     sessionRef.current = { decided: 0, startedAt: Date.now() };
-  }, [businessId]);
+  }, [businessId, requestedProposal]);
 
   const pages = useMemo(() => proposalsQuery.data?.pages ?? [], [proposalsQuery.data]);
   const firstPage = pages[0];
@@ -461,6 +463,16 @@ function BusinessProposalsPage({ businessId }: { businessId: string }) {
           </div>
         }
       />
+      <Link to={`/trabajo?business_id=${businessId}`}>← Espacio de trabajo</Link>
+      {requestedProposal && expandedDetail.isLoading && <p role="status">Cargando la decisión solicitada…</p>}
+      {requestedProposal && expandedDetail.isError && <p role="alert">No se pudo cargar la decisión solicitada. <button onClick={() => void expandedDetail.refetch()}>Reintentar lectura</button></p>}
+      {requestedProposal && expandedDetail.data && !allProposalsUnfiltered.some(item => feedItemId(item) === requestedProposal) && <ProposalGroupCard
+        businessId={businessId}
+        group={{ group_kind: "cause", cause_key: `selected:${requestedProposal}`, cause: "Decisión del proyecto", count: 1, total_impact: expandedDetail.data.estimated_impact, batch_eligible: false, closes_at: null, proposals: [expandedDetail.data] }}
+        focusedProposalId={focusedProposalId} expandedProposalId={expandedProposalId}
+        writeDisabledReason={writeDisabledReason} writeDisabledShortReason={writeDisabledShortReason}
+        accounts={accounts.data?.items ?? []} actions={actions}
+      />}
       <p className={styles.context}>
         {totalPending > 0
           ? `${totalPending} ${totalPending === 1 ? "cosa" : "cosas"} por decidir${expiringSoonCount > 0 ? ` · ${expiringSoonCount} caduca${expiringSoonCount === 1 ? "" : "n"} hoy` : ""}`

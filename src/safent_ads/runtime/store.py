@@ -12,8 +12,11 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from safent_ads.iam.presentation.errors import ApiError
+from safent_ads.opportunities.domain.campaign_draft import DraftError
 from safent_ads.opportunities.infrastructure.campaign_drafts_sql import CampaignDraftStore
 from safent_ads.runtime.contracts import RuntimeResult
+from safent_ads.workspaces.adoption import ensure_workspace
+from safent_ads.workspaces.store import WorkspaceStore
 
 MAX_ATTEMPTS = 3
 
@@ -38,6 +41,7 @@ def job_view(row: Mapping[Any, Any], *, context: bool = False) -> dict[str, Any]
     result.update({name: row[name].isoformat() for name in ("created_at", "updated_at")})
     result["lease_until"] = row["lease_until"].isoformat() if row["lease_until"] else None
     result["authorizes_spend"] = False
+    result["workspace_id"] = str(row["workspace_id"]) if row.get("workspace_id") else None
     if context:
         result["context"] = row["context"]
     return result
@@ -45,6 +49,9 @@ def job_view(row: Mapping[Any, Any], *, context: bool = False) -> dict[str, Any]
 
 async def enqueue_job(session: AsyncSession, business: str, plan: dict[str, Any]) -> dict[str, Any]:
     """Called in the SAME transaction as editorial approval."""
+    workspace_id = await ensure_workspace(
+        session, business, "launch:" + plan["slug"], plan.get("title") or plan["slug"], plan["slug"]
+    )
     params = {"business": UUID(business), "slug": plan["slug"], "revision": plan["revision"]}
     # A new approved revision supersedes unfinished work, fencing late reports.
     await session.execute(
@@ -58,11 +65,16 @@ async def enqueue_job(session: AsyncSession, business: str, plan: dict[str, Any]
         (
             await session.execute(
                 text("""INSERT INTO runtime_jobs
-        (id,business_id,slug,revision,context) VALUES
-        (:id,:business,:slug,:revision,CAST(:context AS jsonb))
+        (id,business_id,slug,revision,context,workspace_id) VALUES
+        (:id,:business,:slug,:revision,CAST(:context AS jsonb),:workspace)
         ON CONFLICT(business_id,slug,revision) DO UPDATE SET slug=EXCLUDED.slug
         RETURNING *"""),
-                {**params, "id": uuid4(), "context": json.dumps(plan)},
+                {
+                    **params,
+                    "id": uuid4(),
+                    "context": json.dumps(plan),
+                    "workspace": UUID(workspace_id),
+                },
             )
         )
         .mappings()
@@ -151,6 +163,10 @@ class RuntimeJobStore:
             result["lease_token"] = lease
         # Existing drafts are context, never commands or implicit authorization.
         result["existing_drafts"] = (await self.drafts.list(business))["items"]
+        if row["workspace_id"]:
+            result["workspace"] = await WorkspaceStore(self.drafts).get(
+                business, str(row["workspace_id"])
+            )
         return {"job": result}
 
     async def heartbeat(
@@ -193,20 +209,61 @@ class RuntimeJobStore:
                     report.expected_draft_revision,
                     report.campaign,
                     transaction=session,
+                    workspace_id=str(row["workspace_id"]) if row["workspace_id"] else None,
                 )
             blockers = list(report.blockers)
             if draft:
                 blockers.extend("Falta en el borrador: " + name for name in draft["missing_fields"])
             state = "blocked" if blockers and report.outcome == "prepared" else report.outcome
+            proposal_id = None
+            preparation_error = None
+            if draft and not draft["missing_fields"] and report.outcome != "failed":
+                # A complete draft deterministically advances to HUMAN REVIEW,
+                # irrespective of which runtime produced it. Never approves.
+                # Savepoint keeps the useful draft if proposal validation fails.
+                try:
+                    async with session.begin_nested():
+                        draft = await self.drafts.promote(
+                            business, draft["draft_id"], draft["revision"], transaction=session
+                        )
+                        proposal_id = draft["proposal_id"]
+                except DraftError as exc:
+                    preparation_error = exc.code + ": " + ", ".join(exc.missing)
+                    state = "blocked"
+                if proposal_id:
+                    state = "prepared"
+                    if row["workspace_id"]:
+                        await WorkspaceStore(self.drafts)._event(
+                            session,
+                            business,
+                            str(row["workspace_id"]),
+                            holder,
+                            "creation_proposed",
+                            {
+                                "draft_id": draft["draft_id"],
+                                "proposal_id": proposal_id,
+                                "authorizes_spend": False,
+                            },
+                        )
             previous = row["result"] or {}
             result = {
                 "summary": report.summary,
-                "blockers": list(dict.fromkeys(blockers)),
+                "blockers": []
+                if proposal_id
+                else list(
+                    dict.fromkeys(blockers + ([preparation_error] if preparation_error else []))
+                ),
                 "draft_id": draft["draft_id"] if draft else previous.get("draft_id"),
                 "draft_revision": draft["revision"] if draft else previous.get("draft_revision"),
+                "proposal_id": proposal_id,
+                "preparation_error": preparation_error,
                 "report_hash": report_hash,
                 "published": False,
-                "activation_blockers": row["context"].get("blockers", []),
+                "activation_blockers": list(
+                    dict.fromkeys(
+                        row["context"].get("blockers", []) + (blockers if proposal_id else [])
+                    )
+                ),
             }
             row = (
                 (
@@ -217,7 +274,12 @@ class RuntimeJobStore:
                         {
                             "id": UUID(job),
                             "state": state,
-                            "message": report.summary,
+                            "message": (
+                                "Propuesta de creación en pausa preparada; "
+                                "pendiente de revisión humana."
+                            )
+                            if proposal_id
+                            else report.summary,
                             "result": json.dumps(result),
                         },
                     )
