@@ -11,6 +11,7 @@ from safent_ads.opportunities.domain.campaign_draft import DraftError
 from safent_ads.panel.presentation.deps import require_business_access
 from safent_ads.runtime.connections import RuntimeConnections
 from safent_ads.runtime.contracts import RuntimeResult
+from safent_ads.runtime.pairing import PairingPoll, PairingRequest, RuntimePairings
 from safent_ads.runtime.store import RuntimeJobStore, runtime_error
 
 BusinessDep = Annotated[str, Depends(require_business_access)]
@@ -44,6 +45,21 @@ class ControlBody(BaseModel):
 
 def build_runtime_router(jobs: RuntimeJobStore, connections: RuntimeConnections) -> APIRouter:
     router = APIRouter(tags=["runtime"])
+    pairings = RuntimePairings(connections)
+
+    @router.post("/api/v1/runtime/pair")
+    async def pair(
+        business_id: BusinessDep, owner: OwnerDep, body: PairingRequest, response: Response
+    ) -> object:
+        del owner
+        response.headers["Cache-Control"] = "no-store"
+        return await pairings.approve(business_id, body)
+
+    @router.post("/runtime/v1/pair/poll")
+    async def poll_pair(body: PairingPoll, response: Response) -> object:
+        # No cookie authority, no writes: possession proof returns RSA ciphertext only.
+        response.headers["Cache-Control"] = "no-store"
+        return await pairings.poll(body.verifier)
 
     @router.get("/api/v1/runtime/connections")
     async def list_connections(business_id: BusinessDep) -> object:
@@ -80,17 +96,22 @@ def build_runtime_router(jobs: RuntimeJobStore, connections: RuntimeConnections)
             return await jobs.retry(business_id, str(identifier), body.message)
         return await jobs.cancel(business_id, str(identifier))
 
-    async def identity(request: Request) -> tuple[str, str]:
+    async def identity(request: Request, *, touch: bool = True) -> tuple[str, str]:
         # No cookie fallback: CSRF exemption is safe only for this bearer-only surface.
         header = request.headers.get("authorization", "")
         if not header.startswith("Bearer "):
             raise runtime_error("RUNTIME_CREDENTIAL_REQUIRED", 401)
-        return await connections.authenticate(header[7:])
+        return await connections.authenticate(header[7:], touch=touch)
 
     @router.post("/runtime/v1/claim")
     async def claim(request: Request) -> object:
         business, holder = await identity(request)
         return await jobs.claim(business, holder)
+
+    @router.post("/runtime/v1/ping")
+    async def ping(request: Request) -> object:
+        business, holder = await identity(request, touch=False)
+        return {"business_id": business, "connection_id": holder.removeprefix("bridge:")}
 
     @router.post("/runtime/v1/heartbeat")
     async def heartbeat(request: Request, body: HeartbeatBody) -> object:

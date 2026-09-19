@@ -38,6 +38,44 @@ conversation. Claude channels are a separate integration, not implemented here.
 Requirements: the engine repository and its `uv` environment, a supported local CLI
 installed and signed in, and an authenticated owner session in the panel.
 
+The normal installer registers the MCP and pairs this machine in one guided flow:
+
+```sh
+./scripts/instalar-mcp.sh --url https://ads.example.com/mcp --solo codex --background
+```
+
+Choose `--solo claude` for Claude Code. The panel opens an owner authorization page;
+compare its device fingerprint with the terminal before authorizing. No token is
+copied or placed in a URL. The server encrypts the narrow 30-day credential to an
+ephemeral RSA-2048 public key; only the requesting machine can decrypt it. Delivery
+expires after five minutes and requires a 256-bit verifier. Repeated identical
+approval is idempotent. Revoking the connection invalidates pending delivery too.
+
+The private 0600 profile is stored under `~/.local/state/safent-runtime/`. Reinstalling
+reuses a valid profile and does not duplicate its user service. Each machine has a
+separate authorization. Expiry/revocation stops the worker; reinstall to reauthorize.
+Keep the repository and its Python environment at the same path while the service
+is installed. An existing MCP name pointing elsewhere is never overwritten.
+
+`--background` explicitly enables quota-consuming work using a macOS LaunchAgent or
+Linux systemd user service (while the user session/machine is running). Without it,
+pairing completes but no worker starts. Windows background services are not supported.
+Use the printed profile path with these commands:
+
+```sh
+uv run python -m safent_ads.runtime.installation status --profile /absolute/path/profile.json
+uv run python -m safent_ads.runtime.installation run --profile /absolute/path/profile.json
+uv run python -m safent_ads.runtime.installation stop --profile /absolute/path/profile.json
+```
+
+`status` checks credential validity, not whether the process is running. `stop` removes
+only the generated user service, keeping the private profile for reconnection. Revoke
+the connection in the panel to invalidate its credential. Native `mcp add --url`
+commands or the script's explicit `--solo-mcp` mode expose remote tools only: remote
+MCP installation cannot silently install or launch a local worker.
+
+### Advanced manual connection
+
 In a launch detail, expand **Conector con Codex / Claude Code**, choose the runtime and
 create a preparation access. Copy its one-time credential locally; never put it in
 a chat, repository or command-line argument. It expires after 30 days and is revocable.

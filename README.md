@@ -199,11 +199,21 @@ Entra en el panel con ese correo y esa contraseña. Un despliegue, un dueño.
 Desde tu copia del repo, en la máquina donde usas los agentes:
 
 ```bash
-./scripts/instalar-mcp.sh --url https://ads.tudominio.com/mcp --nombre safent-ads
+./scripts/instalar-mcp.sh --url https://ads.tudominio.com/mcp --nombre safent-ads --solo codex --background
 ```
 
-Registra el servidor por HTTP nativo en Claude Code y/o Codex, en ámbito
-usuario. Sin token: ningún secreto queda en esa máquina.
+Registra el servidor por HTTP nativo y vincula ese equipo con el panel, sin
+copiar claves. Usa `--solo claude` para Claude Code. Comprueba el código que
+muestran terminal y panel y autoriza con tu cuenta de dueño. Cada equipo requiere
+su propia autorización; repetir la instalación reutiliza una vinculación válida.
+Requiere `uv` y el CLI elegido instalado y con sesión iniciada.
+
+`--background` instala un servicio de usuario (macOS/Linux) que recibe trabajos
+aprobados, consume cuota del runtime y devuelve resultados al panel. Sin ese flag
+queda vinculado, pero debes iniciar el conector manualmente. Conserva el repositorio
+y su entorno Python mientras uses el servicio. Las credenciales locales tienen
+permisos 0600, caducan a los 30 días y son revocables. No activa anuncios.
+Consulta [operación y revocación](docs/runtime-bridge.md).
 
 - Claude Code: `/mcp` → `safent-ads` → **Authenticate** (se abre el navegador).
 - Codex: `codex mcp login safent-ads` si el instalador no lo abrió solo.
@@ -212,7 +222,9 @@ usuario. Sin token: ningún secreto queda en esa máquina.
 
 Sin el script, a mano: `claude mcp add -s user --transport http safent-ads
 https://ads.tudominio.com/mcp` y `codex mcp add safent-ads --url
-https://ads.tudominio.com/mcp`, y luego autorizas igual.
+https://ads.tudominio.com/mcp`, y luego autorizas igual. Esos comandos nativos sólo
+registran herramientas: **no vinculan ni arrancan un runtime local**. También puedes
+elegir explícitamente `--solo-mcp` en el script para ese modo avanzado.
 
 Comprueba que responde pidiéndoselo al agente: «usa solo las herramientas
 `mcp__safent-ads__*` y lista mis negocios».

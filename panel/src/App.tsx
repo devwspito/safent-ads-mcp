@@ -7,6 +7,7 @@ import { getAdsBasePath } from "@/utils/basePath";
 
 const PropuestasPage = lazy(() => import("@/routes/PropuestasPage").then((m) => ({ default: m.PropuestasPage })));
 const LaunchProposalPage = lazy(() => import("@/routes/LaunchProposalPage").then((m) => ({ default: m.LaunchProposalPage })));
+const RuntimePairingPage = lazy(() => import("@/routes/RuntimePairingPage").then((m) => ({ default: m.RuntimePairingPage })));
 const PackagePreviewIndexPage = lazy(() => import("@/routes/PackagePreviewPage").then((m) => ({ default: m.PackagePreviewIndexPage })));
 const PackagePreviewPage = lazy(() => import("@/routes/PackagePreviewPage").then((m) => ({ default: m.PackagePreviewPage })));
 const CampanasPage = lazy(() => import("@/routes/CampanasPage").then((m) => ({ default: m.CampanasPage })));
@@ -36,6 +37,7 @@ export function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/oauth/autorizar" element={<ConsentimientoPage />} />
+          <Route path="/runtime/vincular" element={<RuntimePairingPage />} />
           <Route element={<AppShell />}>
             <Route path="/propuestas" element={<PropuestasPage />} />
             <Route path="/propuestas/lanzamiento/:slug" element={<LaunchProposalPage />} />
