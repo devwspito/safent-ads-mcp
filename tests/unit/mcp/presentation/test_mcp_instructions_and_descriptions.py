@@ -9,7 +9,7 @@ from safent_ads.mcp.presentation.http import MCP_INSTRUCTIONS, build_mcp_instruc
 from tests.unit.mcp.presentation.test_catalog_registries_by_permission import _full_registry
 from tests.unit.test_no_client_strings import has_client_string
 
-_MAX_INSTRUCTIONS_LINES = 33
+_MAX_INSTRUCTIONS_LINES = 40  # Includes the versioned shared-workspace workflow.
 _MIN_DESCRIPTION_LENGTH = 40
 
 # 004 tasks-2.md §0/Q3 (historia 24): la nota es texto que el modelo lee,

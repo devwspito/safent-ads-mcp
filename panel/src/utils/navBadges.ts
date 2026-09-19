@@ -20,6 +20,10 @@ export function deriveNavBadges(badges: BadgesResponse | undefined): Record<stri
       count: badges.proposals.pending > 0 ? badges.proposals.pending : undefined,
       dot: badges.proposals.critical > 0 ? "red" : undefined,
     },
+    "/trabajo": {
+      count: badges.proposals.pending > 0 ? badges.proposals.pending : undefined,
+      dot: badges.proposals.critical > 0 ? "red" : undefined,
+    },
     "/campanas": badges.connections.level === "warn" ? { dot: "amber" } : {},
     "/ajustes": badges.connections.level === "error" ? { dot: "red" } : {},
   };

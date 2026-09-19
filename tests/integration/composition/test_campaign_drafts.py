@@ -24,6 +24,7 @@ from safent_ads.mcp.application.errors import BusinessForbiddenError
 from safent_ads.opportunities.domain.campaign_draft import DraftError, DraftFields
 from safent_ads.opportunities.infrastructure.campaign_drafts_sql import CampaignDraftStore
 from safent_ads.opportunities.presentation.campaign_drafts_rest import build_campaign_drafts_router
+from safent_ads.workspaces.store import WorkspaceStore
 
 pytestmark = pytest.mark.integration
 
@@ -192,9 +193,7 @@ async def test_complete_mcp_draft_promotes_atomically_once_and_never_approves(
             )
         ).scalar_one()
         await session.commit()
-    _, dispatcher = _build_mcp_registry_and_dispatcher(
-        container, container.settings, AsyncMock()
-    )
+    _, dispatcher = _build_mcp_registry_and_dispatcher(container, container.settings, AsyncMock())
     caller = CallerScope(
         "owner-agent", frozenset({business}), Permission.PROPOSE, "Agente de prueba"
     )
@@ -258,6 +257,18 @@ async def test_complete_mcp_draft_promotes_atomically_once_and_never_approves(
     results = [envelope["result"] for envelope in envelopes]
     assert len({item["proposal_id"] for item in results}) == 1
     assert all(item["state"] == "proposed" and not item["executable"] for item in results)
+    workspace_store = WorkspaceStore(store)
+    project = (await workspace_store.list(business))["items"][0]
+    views = await asyncio.gather(
+        *(
+            workspace_store.prepare(business, project["id"], saved["draft_id"], 2, "other-runtime")
+            for _ in range(3)
+        )
+    )
+    assert all(view["campaigns"][0]["step"]["state"] == "approval" for view in views)
+    assert all(
+        view["campaigns"][0]["proposal"]["id"] == results[0]["proposal_id"] for view in views
+    )
     with pytest.raises(DraftError, match="ALREADY_PROPOSED"):
         await store.save(business, "tomorrow", 3, DraftFields(notes="Changed after promotion"))
     scope = two_businesses.business_a

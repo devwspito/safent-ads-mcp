@@ -118,7 +118,8 @@ async def test_view_permission_sees_only_read_tools_never_propose() -> None:
     assert response.status_code == 200, response.text
     assert "mcp-session-id" not in response.headers
     names = {tool["name"] for tool in response.json()["result"]["tools"]}
-    assert len(names) == 80
+    assert len(names) == 82
+    assert {"list_workspaces", "get_workspace"} <= names
     assert {"list_runtime_jobs", "get_runtime_job"} <= names
     assert {"claim_runtime_job", "heartbeat_runtime_job", "propose_runtime_result"}.isdisjoint(
         names
@@ -133,7 +134,12 @@ async def test_propose_permission_sees_read_and_proposal_tools() -> None:
 
     assert response.status_code == 200, response.text
     names = {tool["name"] for tool in response.json()["result"]["tools"]}
-    assert len(names) == 107
+    assert len(names) == 112
+    assert {
+        "propose_workspace",
+        "propose_workspace_campaign",
+        "propose_workspace_creation",
+    } <= names
     assert {"claim_runtime_job", "heartbeat_runtime_job", "propose_runtime_result"} <= names
     assert "propose_budget_change" in names
 
@@ -265,9 +271,9 @@ async def test_single_owner_mode_lists_exactly_the_approve_registry(
 
     assert response.status_code == 200, response.text
     names = {tool["name"] for tool in response.json()["result"]["tools"]}
-    # `aprobar` (107 de `proponer` + las 2 `CONNECTION_WRITE`, A5/Anadido del
+    # `aprobar` (112 de `proponer` + las 2 `CONNECTION_WRITE`, A5/Anadido del
     # dueno): el modo de un solo propietario ve el catalogo COMPLETO.
-    assert len(names) == 109
+    assert len(names) == 114
     assert "propose_budget_change" in names
     assert "connect_platform_account" in names
 

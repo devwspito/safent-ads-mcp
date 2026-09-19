@@ -5,7 +5,7 @@ import styles from "./CampaignDrafts.module.css";
 
 const labels: Record<string, string> = { title: "nombre", platform: "plataforma", offering_id: "oferta", account_ref: "cuenta publicitaria", objective: "objetivo", daily_budget: "presupuesto diario y moneda", duration_days: "duración", success_criterion: "criterio de éxito", kill_criterion: "criterio de parada", angle: "enfoque", targeting_seed: "audiencia", landing_url: "URL de reserva o destino", creation_plan: "plan nativo pausado" };
 
-export function CampaignDrafts({ businessId, draftId }: { businessId: string; draftId?: string }) {
+export function CampaignDrafts({ businessId, draftId, hidePromotion = false }: { businessId: string; draftId?: string; hidePromotion?: boolean }) {
   const query = useCampaignDrafts(businessId);
   const save = useSaveCampaignDraft(businessId);
   const [title, setTitle] = useState("");
@@ -28,12 +28,12 @@ export function CampaignDrafts({ businessId, draftId }: { businessId: string; dr
     {error ? <p role="alert">{error} Revisa los borradores antes de reintentar.</p> : null}
     {query.isError ? <p role="alert">No se han podido cargar los borradores. <button onClick={() => void query.refetch()}>Reintentar lectura</button></p> : null}
     {query.isPending ? <p>Cargando borradores…</p> : null}
-    {query.data?.items.filter(draft => !draftId || draft.draft_id === draftId).map(draft => <DraftCard key={`${draft.draft_id}:${draft.revision}`} draft={draft} businessId={businessId} />)}
+    {query.data?.items.filter(draft => !draftId || draft.draft_id === draftId).map(draft => <DraftCard key={`${draft.draft_id}:${draft.revision}`} draft={draft} businessId={businessId} hidePromotion={hidePromotion} />)}
     {query.data?.has_more ? <p>Hay más borradores; usa el chat con el ID del borrador para abrirlo.</p> : null}
   </section>;
 }
 
-function DraftCard({ draft, businessId }: { draft: CampaignDraft; businessId: string }) {
+function DraftCard({ draft, businessId, hidePromotion }: { draft: CampaignDraft; businessId: string; hidePromotion: boolean }) {
   const save = useSaveCampaignDraft(businessId);
   const promote = usePromoteCampaignDraft(businessId);
   const [amount, setAmount] = useState(draft.brief.daily_budget?.amount ?? "");
@@ -68,7 +68,7 @@ function DraftCard({ draft, businessId }: { draft: CampaignDraft; businessId: st
           <button type="submit">Guardar cambios del borrador</button>
         </fieldset>
       </form></details>
-      <button disabled={busy || draft.missing_fields.length > 0} onClick={() => void prepare()}>Preparar propuesta para revisión</button>
+      {!hidePromotion && <button disabled={busy || draft.missing_fields.length > 0} onClick={() => void prepare()}>Preparar propuesta para revisión</button>}
     </> : <p>Propuesta: {draft.proposal_id}</p>}
     {error ? <p role="alert">{error} No se ha aprobado ni ejecutado ninguna campaña.</p> : null}
     <small>ID: {draft.draft_id} · revisión {draft.revision}. El chat puede continuar este borrador.</small>
