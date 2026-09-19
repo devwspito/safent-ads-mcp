@@ -1,6 +1,8 @@
 """One scoped transaction for each draft write, including promotion to a proposal."""
 
 import json
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 from uuid import UUID
 
@@ -51,9 +53,10 @@ class CampaignDraftStore:
         self._enabled_google_channels = enabled_google_channels
 
     async def save(
-        self, business: str, key: str, revision: int | None, changes: DraftFields
+        self, business: str, key: str, revision: int | None, changes: DraftFields,
+        *, transaction: AsyncSession | None = None,
     ) -> dict[str, Any]:
-        async with self._sessions.begin() as session:
+        async with self._save_session(transaction) as session:
             params = {"business": UUID(business), "key": key}
             await self._business(session, business)
             # Serialize first creation and updates by a stable scoped key.
@@ -107,6 +110,15 @@ class CampaignDraftStore:
                 .one()
             )
             return self._view(result)
+
+    @asynccontextmanager
+    async def _save_session(self, session: AsyncSession | None) -> AsyncIterator[AsyncSession]:
+        """Let a job result and its draft commit atomically without bypassing validation."""
+        if session is not None:
+            yield session
+        else:
+            async with self._sessions.begin() as owned:
+                yield owned
 
     async def list(self, business: str) -> dict[str, Any]:
         async with self._sessions() as session:

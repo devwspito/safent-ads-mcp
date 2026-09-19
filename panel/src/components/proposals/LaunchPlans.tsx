@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { useLaunchPlans } from "@/api/queries/launchPlans";
 import styles from "./LaunchPlans.module.css";
 
+const preparationLabels = { queued: "Esperando runtime", running: "Preparando", prepared: "Borrador preparado", blocked: "Necesita información", failed: "Preparación interrumpida", cancelled: "Preparación cancelada" };
+
 export function LaunchPlans({ businessId }: { businessId: string }) {
   const query = useLaunchPlans(businessId);
   if (query.isError) return <p role="alert">No se pudieron cargar los planes de lanzamiento. <button onClick={() => void query.refetch()}>Reintentar</button></p>;
@@ -13,7 +15,7 @@ export function LaunchPlans({ businessId }: { businessId: string }) {
       to={`/propuestas/lanzamiento/${encodeURIComponent(plan.slug)}?business_id=${encodeURIComponent(businessId)}`}
       className={styles.summaryCard}
     >
-      <div className={styles.summaryHeader}><span className={styles.eyebrow}>Plan de lanzamiento</span><span className={styles.status}>{plan.review.approved ? "Revisión guardada" : "Pendiente de revisión"}</span></div>
+      <div className={styles.summaryHeader}><span className={styles.eyebrow}>Plan de lanzamiento</span><span className={styles.status}>{plan.preparation ? preparationLabels[plan.preparation.state] : plan.review.approved ? "Preparación pendiente" : "Pendiente de revisión"}</span></div>
       <h2>{plan.title}</h2>
       <p>{plan.summary}</p>
       <div className={styles.summaryFooter}><span>{plan.documents.length} documentos · {plan.video_slots.filter(slot => slot.uploaded).length}/{plan.video_slots.length} vídeos guardados</span><span className={styles.detailLink}>Ver detalle <span aria-hidden="true">→</span></span></div>

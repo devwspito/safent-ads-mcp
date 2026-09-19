@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from safent_ads.audit.application.record_decision import RecordDecision
 from safent_ads.audit.domain.entry import ActorKind, DecisionKind, PendingDecision
 from safent_ads.audit.infrastructure.sql_repository import SqlDecisionLogRepository
+from safent_ads.runtime.store import enqueue_job
 from safent_ads.shared.ids import BusinessId
 
 
@@ -38,7 +39,17 @@ class LaunchApprovalStore:
             "approved_at": row["occurred_at"].isoformat() if matched and row else None,
         }
 
-    async def approve(self, business: str, slug: str, revision: str, owner: UUID) -> dict[str, Any]:
+    async def approve(
+        self,
+        business: str,
+        slug: str,
+        revision: str,
+        owner: UUID,
+        *,
+        plan: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        if plan is not None and (plan["revision"] != revision or plan["slug"] != slug):
+            raise ValueError("The job must match the exact approved plan")
         async with self.sessions() as session:
             await RecordDecision(SqlDecisionLogRepository(session)).execute(
                 PendingDecision(
@@ -49,10 +60,14 @@ class LaunchApprovalStore:
                     payload={
                         "slug": slug,
                         "revision": revision,
-                        "scope": "editorial-plan-only",
+                        "scope": "editorial-plan-and-preparation"
+                        if plan
+                        else "editorial-plan-only",
                         "authorizes_spend": False,
                     },
                 )
             )
+            if plan is not None:
+                await enqueue_job(session, business, plan)
             await session.commit()
         return await self.status(business, slug, revision)

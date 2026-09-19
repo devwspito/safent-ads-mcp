@@ -317,7 +317,7 @@ class ToolDispatcher:
     def _enforce_scope(
         self, definition: ToolDefinition[Any], caller_scope: CallerScope, log: structlog.BoundLogger
     ) -> None:
-        if definition.tool_class is not ToolClass.PROPOSAL:
+        if definition.tool_class not in {ToolClass.PROPOSAL, ToolClass.RUNTIME_WRITE}:
             return
         if not caller_scope.has_scope(_PROPOSAL_SCOPE):
             log.warning("mcp_tool_forbidden_scope", caller_id=caller_scope.caller_id)

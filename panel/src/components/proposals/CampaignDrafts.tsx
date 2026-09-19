@@ -5,7 +5,7 @@ import styles from "./CampaignDrafts.module.css";
 
 const labels: Record<string, string> = { title: "nombre", platform: "plataforma", offering_id: "oferta", account_ref: "cuenta publicitaria", objective: "objetivo", daily_budget: "presupuesto diario y moneda", duration_days: "duración", success_criterion: "criterio de éxito", kill_criterion: "criterio de parada", angle: "enfoque", targeting_seed: "audiencia", landing_url: "URL de reserva o destino", creation_plan: "plan nativo pausado" };
 
-export function CampaignDrafts({ businessId }: { businessId: string }) {
+export function CampaignDrafts({ businessId, draftId }: { businessId: string; draftId?: string }) {
   const query = useCampaignDrafts(businessId);
   const save = useSaveCampaignDraft(businessId);
   const [title, setTitle] = useState("");
@@ -21,14 +21,14 @@ export function CampaignDrafts({ businessId }: { businessId: string }) {
   return <section aria-label="Borradores de campañas" className={styles.section}>
     <h2>Borradores — no ejecutables</h2>
     <p>Guarda la idea ahora y completa presupuesto, destino y detalles más tarde desde el chat o aquí. Guardar no crea campañas ni concede aprobación.</p>
-    <form onSubmit={event => void create(event)} className={styles.form}>
+    {!draftId ? <form onSubmit={event => void create(event)} className={styles.form}>
       <label>Nombre del borrador<input value={title} maxLength={128} required onChange={event => setTitle(event.target.value)} /></label>
       <button disabled={save.isPending || !businessId} type="submit">Guardar borrador</button>
-    </form>
+    </form> : null}
     {error ? <p role="alert">{error} Revisa los borradores antes de reintentar.</p> : null}
     {query.isError ? <p role="alert">No se han podido cargar los borradores. <button onClick={() => void query.refetch()}>Reintentar lectura</button></p> : null}
     {query.isPending ? <p>Cargando borradores…</p> : null}
-    {query.data?.items.map(draft => <DraftCard key={`${draft.draft_id}:${draft.revision}`} draft={draft} businessId={businessId} />)}
+    {query.data?.items.filter(draft => !draftId || draft.draft_id === draftId).map(draft => <DraftCard key={`${draft.draft_id}:${draft.revision}`} draft={draft} businessId={businessId} />)}
     {query.data?.has_more ? <p>Hay más borradores; usa el chat con el ID del borrador para abrirlo.</p> : null}
   </section>;
 }

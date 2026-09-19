@@ -95,6 +95,7 @@ from safent_ads.mcp.presentation.reference_data_tools import (
     build_reference_data_tool_definitions,
 )
 from safent_ads.mcp.presentation.registry import ToolClass, ToolDefinition, ToolRegistry
+from safent_ads.mcp.presentation.runtime_tools import build_runtime_tools
 from safent_ads.mcp.presentation.search_terms_tools import (
     SearchTermsToolServices,
     build_search_terms_tool_definitions,
@@ -104,6 +105,7 @@ from safent_ads.mcp.presentation.write_handlers import build_write_handlers
 from safent_ads.opportunities.infrastructure.campaign_drafts_sql import CampaignDraftStore
 from safent_ads.optimization.application.query_service import OptimizationQueryService
 from safent_ads.proposals.domain.google_channel_spec import GoogleAdvertisingChannelType
+from safent_ads.runtime.store import RuntimeJobStore
 from safent_ads.shared.clock import Clock
 
 # `ver` -> READ; `proponer` -> +PROPOSAL+CATALOG_WRITE+CREATIVE_WRITE;
@@ -120,6 +122,7 @@ _CLASSES_BY_PERMISSION: dict[Permission, frozenset[ToolClass]] = {
             ToolClass.PROPOSAL,
             ToolClass.CATALOG_WRITE,
             ToolClass.CREATIVE_WRITE,
+            ToolClass.RUNTIME_WRITE,
         }
     ),
     Permission.APPROVE: frozenset(
@@ -128,6 +131,7 @@ _CLASSES_BY_PERMISSION: dict[Permission, frozenset[ToolClass]] = {
             ToolClass.PROPOSAL,
             ToolClass.CATALOG_WRITE,
             ToolClass.CREATIVE_WRITE,
+            ToolClass.RUNTIME_WRITE,
             ToolClass.CONNECTION_WRITE,
         }
     ),
@@ -454,6 +458,7 @@ def build_default_registry(
     native_ads_services: NativeAdsToolServices | None = None,
     offering_creation: CreateOffering | None = None,
     campaign_drafts: CampaignDraftStore | None = None,
+    runtime_jobs: RuntimeJobStore | None = None,
     connection_services: ConnectionToolServices | None = None,
     reference_data_services: ReferenceDataToolServices | None = None,
     passthrough_services: PassthroughToolServices | None = None,
@@ -545,6 +550,8 @@ def build_default_registry(
         definitions.extend(build_store_api_tools(store_api_service))
     if google_tag_manager_services is not None:
         definitions.extend(build_google_tag_manager_tool_definitions(google_tag_manager_services))
+    if runtime_jobs is not None:
+        definitions.extend(build_runtime_tools(runtime_jobs))
     return ToolRegistry(definitions)
 
 

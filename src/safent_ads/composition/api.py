@@ -53,6 +53,7 @@ _MUTATING_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 # grants) NUNCA entra aqui: lleva `ads_session` + CSRF de doble envio como
 # el resto del panel (C-40).
 _CSRF_EXEMPT_PREFIXES = (
+    "/runtime/v1/",  # bearer-only narrow bridge; /api/v1/runtime still requires session+CSRF
     "/mcp",
     "/api/v1/auth/exchange",
     "/authorize",

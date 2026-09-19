@@ -42,6 +42,7 @@ class ToolClass(StrEnum):
     CATALOG_WRITE = "catalog_write"
     CONNECTION_WRITE = "connection_write"
     CREATIVE_WRITE = "creative_write"
+    RUNTIME_WRITE = "runtime_write"
 
 
 BusinessIdExtractor = Callable[[Any], str]
@@ -59,6 +60,7 @@ _CONNECTION_WRITE_NAMES = frozenset({"connect_platform_account", "get_connection
 # mecanismo que las dos de arriba -- `upload_` no necesita entrar en
 # `tool_naming.py`, ese fichero no se toca.
 _CREATIVE_WRITE_NAMES = frozenset({"upload_creative_asset"})
+_RUNTIME_WRITE_NAMES = frozenset({"claim_runtime_job", "heartbeat_runtime_job"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,6 +98,10 @@ class ToolRegistry:
         self._by_name[definition.name] = definition
 
     def _reject_forbidden_name(self, name: str, tool_class: ToolClass) -> None:
+        if tool_class is ToolClass.RUNTIME_WRITE:
+            if name not in _RUNTIME_WRITE_NAMES:
+                raise ForbiddenToolNameError("escritura de coordinación no permitida")
+            return
         if tool_class is ToolClass.CATALOG_WRITE:
             if name not in _CATALOG_WRITE_NAMES:
                 raise ForbiddenToolNameError("escritura de catálogo no permitida")
