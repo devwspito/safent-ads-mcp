@@ -3,8 +3,8 @@
 # (contracts/instalar-mcp-cli.md).
 #
 # Sin token (lo normal): registra el servidor y autorizas en el navegador
-# (entrando con Google o con tu contraseña). Ningún secreto queda en esta
-# máquina; el acceso se quita desde el panel
+# (entrando con Google o con tu contraseña). Vincula también el runtime;
+# sus credenciales locales son privadas y el acceso se quita desde el panel
 # (Conexiones → Aplicaciones con acceso).
 #
 # Con token (vía de emergencia o CI): SOLO por `--token-stdin`, leyendo el
@@ -24,6 +24,8 @@ URL=""
 CONFIG_FILE=""
 TOKEN_STDIN=0
 SOLO=""
+SOLO_MCP=0
+BACKGROUND=0
 # Par heredado que retirar en modo OAuth: la variable y el directorio que
 # escribía una versión anterior de este instalador, atada a UN despliegue.
 # El instalador estándar no conoce ningún nombre de cliente: quien tuvo esa
@@ -36,7 +38,7 @@ LEGACY_CONFIG_DIR=""
 uso() {
   cat <<'EOF'
 Uso: instalar-mcp.sh --url <URL> [--nombre <nombre>] [--config <fichero>]
-                      [--token-stdin] [--solo claude|codex]
+                      [--token-stdin] [--solo claude|codex] [--solo-mcp] [--background]
 
   --url <URL>        Obligatorio (salvo por --config/entorno). URL completa
                       del endpoint /mcp. Debe ser https:// salvo loopback.
@@ -48,6 +50,8 @@ Uso: instalar-mcp.sh --url <URL> [--nombre <nombre>] [--config <fichero>]
   --token-stdin       Activa la vía estática leyendo el bearer de stdin.
                       Única forma de pasar un token.
   --solo claude|codex Restringe a un agente.
+  --solo-mcp         Sólo herramientas remotas, sin vincular runtime (modo avanzado).
+  --background       Inicia el conector al iniciar sesión (macOS/Linux); consume cuota.
   -h, --help          Este uso.
 
 Entorno equivalente (misma precedencia que --config): ADS_MCP_URL, ADS_MCP_NAME.
@@ -97,6 +101,8 @@ parsear_argumentos() {
       --config) CONFIG_FILE="${2:?--config exige un valor}"; shift 2 ;;
       --token-stdin) TOKEN_STDIN=1; shift ;;
       --solo) SOLO="${2:?--solo exige claude o codex}"; shift 2 ;;
+      --solo-mcp) SOLO_MCP=1; shift ;;
+      --background) BACKGROUND=1; shift ;;
       -h|--help) uso; exit 0 ;;
       *) fallo "argumento no reconocido: $1 (ver --help)"; exit 1 ;;
     esac
@@ -378,6 +384,24 @@ main() {
   parsear_argumentos "$@"
   resolver_url_y_nombre
 
+  if [ "$BACKGROUND" = 1 ] && { [ "$SOLO_MCP" = 1 ] || [ "$TOKEN_STDIN" = 1 ]; }; then
+    fallo "--background requiere instalación vinculada, sin --solo-mcp ni --token-stdin."
+    exit 1
+  fi
+  if [ "$SOLO_MCP" = 0 ] && [ "$TOKEN_STDIN" = 0 ]; then
+    if [ -z "$SOLO" ]; then
+      fallo "Elige --solo codex o --solo claude para vincular el equipo. No se arrancan dos runtimes automáticamente."
+      exit 1
+    fi
+    command -v uv >/dev/null 2>&1 || { fallo "Instala uv para la instalación vinculada, o usa --solo-mcp sólo para herramientas remotas."; exit 1; }
+    local repo_dir
+    repo_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+    local arguments=(run --project "$repo_dir" python -m safent_ads.runtime.installation install
+      --url "${URL%/mcp}" --runtime "$SOLO" --name "$NOMBRE")
+    if [ "$BACKGROUND" = 1 ]; then arguments+=(--background); fi
+    exec uv "${arguments[@]}"
+  fi
+
   local variable env_file source_line token="" salida=0 alguno=0
   variable="$(nombre_variable_token "$NOMBRE")"
   env_file="$HOME/.config/$NOMBRE/mcp.env"
@@ -392,7 +416,7 @@ main() {
     [ -n "$token" ] || { fallo "stdin no traía ningún token."; exit 1; }
     echo "→ Modo: token estático (vía de emergencia; lo normal es sin token, por OAuth)."
   else
-    echo "→ Modo: OAuth (autorizas en el navegador, entrando con Google o con tu contraseña; ningún secreto queda en esta máquina)."
+    echo "→ Modo: OAuth sólo MCP (autorizas en el navegador; el runtime no se vincula)."
     retirar_token_estatico || registrar_fallo "$?"
   fi
 
@@ -427,7 +451,7 @@ main() {
   fi
   cat <<EOF
 
-Listo.
+Herramientas MCP registradas. Runtime no vinculado en este modo.
   Panel: ${URL%/mcp}/
   Entra en el panel con tu cuenta de dueño. Las aplicaciones autorizadas se ven y
   se quitan en Conexiones → Aplicaciones con acceso.

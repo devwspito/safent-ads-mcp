@@ -20,20 +20,25 @@ class RuntimeConnections:
     async def create(
         self, business: str, label: str, runtime: Literal["codex", "claude"]
     ) -> dict[str, Any]:
-        token, identifier = secrets.token_urlsafe(48), uuid4()
         async with self.sessions.begin() as session:
-            await session.execute(
-                text("""INSERT INTO runtime_connections
+            return await self.create_in_session(session, business, label, runtime)
+
+    async def create_in_session(
+        self, session: AsyncSession, business: str, label: str, runtime: Literal["codex", "claude"]
+    ) -> dict[str, Any]:
+        token, identifier = secrets.token_urlsafe(48), uuid4()
+        await session.execute(
+            text("""INSERT INTO runtime_connections
                 (id,business_id,label,runtime,token_hash) VALUES
                 (:id,:business,:label,:runtime,:hash)"""),
-                {
-                    "id": identifier,
-                    "business": UUID(business),
-                    "label": label,
-                    "runtime": runtime,
-                    "hash": digest(token),
-                },
-            )
+            {
+                "id": identifier,
+                "business": UUID(business),
+                "label": label,
+                "runtime": runtime,
+                "hash": digest(token),
+            },
+        )
         return {"id": str(identifier), "token": token, "expires_in_days": 30}
 
     async def list(self, business: str) -> dict[str, Any]:
@@ -89,17 +94,18 @@ class RuntimeConnections:
                 {"business": UUID(business), "holder": "bridge:" + identifier},
             )
 
-    async def authenticate(self, token: str) -> tuple[str, str]:
+    async def authenticate(self, token: str, *, touch: bool = True) -> tuple[str, str]:
         if not MIN_TOKEN_LENGTH <= len(token) <= MAX_TOKEN_LENGTH:
             raise runtime_error("RUNTIME_CREDENTIAL_INVALID", 401)
         async with self.sessions.begin() as session:
             row = (
                 await session.execute(
                     text("""UPDATE runtime_connections
-                SET last_seen_at=now() WHERE token_hash=:hash
+                SET last_seen_at=CASE WHEN :touch THEN now() ELSE last_seen_at END
+                WHERE token_hash=:hash
                   AND revoked_at IS NULL AND expires_at>now()
                 RETURNING business_id,id"""),
-                    {"hash": digest(token)},
+                    {"hash": digest(token), "touch": touch},
                 )
             ).first()
         if row is None:

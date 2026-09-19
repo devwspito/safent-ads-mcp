@@ -28,16 +28,14 @@ _FAKE_CLI = Path(__file__).resolve().parent / "fake_agent_cli.py"
 _SERVER_NAME = "mis-ads"
 _SERVER_URL = "https://ads.example.com/mcp"
 _TOKEN = "bearer-de-prueba-que-no-debe-filtrarse"  # noqa: S105 -- valor del test, no un secreto
-_PROFILES = (".zshrc", ".bashrc", ".profile")
+_PROFILES = (".zshrc", ".bashrc", ".bash_profile", ".profile")
 # Par heredado de un despliegue imaginario: nombres neutros, declarados en
 # un `--config` de prueba. `$HOME` va sin expandir a proposito -- asi lo
 # escribio en el perfil la version anterior del instalador y asi hay que
 # encontrarlo para quitarlo.
 _LEGACY_VARIABLE = "VIEJO_MCP_TOKEN"  # noqa: S105 -- nombre de variable, no un secreto
 _LEGACY_CONFIG_DIR = "$HOME/.config/viejo-ads"
-_LEGACY_SOURCE_LINE = (
-    f'[ -f "{_LEGACY_CONFIG_DIR}/mcp.env" ] && . "{_LEGACY_CONFIG_DIR}/mcp.env"'
-)
+_LEGACY_SOURCE_LINE = f'[ -f "{_LEGACY_CONFIG_DIR}/mcp.env" ] && . "{_LEGACY_CONFIG_DIR}/mcp.env"'
 
 
 @dataclass(frozen=True)
@@ -59,7 +57,7 @@ class Installation:
 
     def run(self, *arguments: str, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(  # noqa: S603 -- ruta fija del repo, sin shell
-            [str(_INSTALLER), *arguments],
+            [str(_INSTALLER), "--solo-mcp", *arguments],
             capture_output=True,
             text=True,
             env=self._environment(),
@@ -75,7 +73,7 @@ class Installation:
         controller, terminal = pty.openpty()
         try:
             return subprocess.run(  # noqa: S603 -- ruta fija del repo, sin shell
-                [str(_INSTALLER), *arguments],
+                [str(_INSTALLER), "--solo-mcp", *arguments],
                 capture_output=True,
                 text=True,
                 env=self._environment(),
@@ -149,6 +147,39 @@ def installation(tmp_path: Path) -> Installation:
     state = tmp_path / "state"
     state.mkdir()
     return Installation(home=home, path_dir=path_dir, state=state)
+
+
+def test_default_install_requires_one_runtime_without_mutation(installation: Installation) -> None:
+    result = subprocess.run(  # noqa: S603
+        [str(_INSTALLER), "--url", _SERVER_URL],
+        capture_output=True,
+        text=True,
+        env=installation._environment(),
+        check=False,
+    )
+    assert result.returncode == 1
+    assert "--solo codex" in result.stderr
+    assert installation.calls() == ""
+
+
+def test_default_install_delegates_pairing_and_explicit_background(
+    installation: Installation,
+) -> None:
+    fake_uv = installation.path_dir / "uv"
+    fake_uv.write_text('#!/usr/bin/env bash\nprintf "%s\\n" "$@"\n')
+    fake_uv.chmod(0o755)
+    result = subprocess.run(  # noqa: S603
+        [str(_INSTALLER), "--url", _SERVER_URL, "--solo", "codex", "--background"],
+        capture_output=True,
+        text=True,
+        env=installation._environment(),
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert "safent_ads.runtime.installation\ninstall\n" in result.stdout
+    assert "--url\nhttps://ads.example.com\n--runtime\ncodex\n" in result.stdout
+    assert "--background" in result.stdout
+    assert installation.calls() == ""
 
 
 class TestInvariant1UrlIsRequired:
@@ -298,9 +329,7 @@ class TestInvariant3OAuthLeavesNoSecretBehind:
         assert [c.read_text(encoding="utf-8") for c in copias] == [original]
         assert str(copias[0]) in result.stderr
 
-    def test_a_successful_rewrite_leaves_no_copy_behind(
-        self, installation: Installation
-    ) -> None:
+    def test_a_successful_rewrite_leaves_no_copy_behind(self, installation: Installation) -> None:
         """La contraparte: en el camino normal no queda ninguna copia con el
         token dentro rondando por el HOME."""
         profile = installation.home / ".bashrc"
