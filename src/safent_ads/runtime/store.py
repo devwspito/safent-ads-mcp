@@ -152,6 +152,11 @@ class RuntimeJobStore:
                         text("""UPDATE runtime_jobs SET state='running',
                 holder=:holder,lease_hash=:lease,lease_until=now()+interval '120 seconds',
                 attempts=attempts+1, message='Runtime conectado; preparando borrador.',
+                context=jsonb_set(context,'{workspace_revision}',COALESCE(
+                    (SELECT to_jsonb(w.revision) FROM workspaces w
+                     WHERE w.id=runtime_jobs.workspace_id
+                       AND w.business_id=runtime_jobs.business_id),
+                    'null'::jsonb)),
                 updated_at=now() WHERE id=:id RETURNING *"""),
                         {"id": row["id"], "holder": holder, "lease": digest(lease)},
                     )
@@ -192,6 +197,17 @@ class RuntimeJobStore:
         self, business: str, job: str, holder: str, lease: str, report: RuntimeResult
     ) -> dict[str, Any]:
         async with self.sessions.begin() as session:
+            # Same lock ordering as workspace edits/enqueue: workspace -> job.
+            # A model working on revision N must not overwrite decisions from N+1.
+            context_revision = (
+                await session.execute(
+                    text("""SELECT w.revision
+                FROM workspaces w JOIN runtime_jobs j ON j.workspace_id=w.id
+                  AND j.business_id=w.business_id
+                WHERE j.id=:job AND j.business_id=:business FOR SHARE OF w"""),
+                    {"job": UUID(job), "business": UUID(business)},
+                )
+            ).scalar_one_or_none()
             row = await self._row(session, business, job)
             self._holder(row, holder, lease)
             if row["state"] == "cancelled" or not await self._current(row):
@@ -200,6 +216,20 @@ class RuntimeJobStore:
             if row["result"] and row["result"].get("report_hash") == report_hash:
                 return job_view(row)  # A lost response can be acknowledged safely.
             await self._leased(session, business, job, holder, lease)
+            if row["context"].get("workspace_revision") != context_revision:
+                changed = (
+                    (
+                        await session.execute(
+                            text("""UPDATE runtime_jobs SET state='blocked',
+                    message='El contexto compartido ha cambiado. Reintenta con la revisión actual.',
+                    lease_until=NULL,updated_at=now() WHERE id=:id RETURNING *"""),
+                            {"id": UUID(job)},
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                return job_view(changed)
             draft = None
             if report.campaign is not None:
                 # Stable job-owned key, same transaction, normal draft validation.

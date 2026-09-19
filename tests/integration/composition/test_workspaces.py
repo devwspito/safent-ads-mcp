@@ -173,6 +173,35 @@ async def test_mcp_to_panel_to_other_runtime_same_context(
     assert reread["capabilities"]["automatic_activation"] is False
 
 
+async def test_in_flight_result_cannot_overwrite_new_workspace_revision(container, two_businesses):
+    service = store(container)
+    business = str(two_businesses.business_a)
+    async with container.session_factory.begin() as session:
+        job = await enqueue_job(
+            session,
+            business,
+            {"slug": "launch", "revision": "a" * 64, "title": "Launch", "blockers": []},
+        )
+    runtime = RuntimeJobStore(container.session_factory, service.drafts)
+    claim = (await runtime.claim(business, "claude"))["job"]
+    await service.save(business, "launch:launch", 1, WorkspaceBrief(schedule="New date"), "panel")
+    response = await runtime.report(
+        business,
+        job["id"],
+        "claude",
+        claim["lease_token"],
+        RuntimeResult(
+            outcome="blocked",
+            summary="Old result",
+            blockers=["Old date"],
+            campaign=DraftFields(title="Old result"),
+        ),
+    )
+    assert response["state"] == "blocked"
+    assert "contexto compartido" in response["message"]
+    assert (await service.drafts.list(business))["items"] == []
+
+
 async def test_idempotency_revision_and_foreign_business(container, two_businesses):
     service = store(container)
     business = str(two_businesses.business_a)
