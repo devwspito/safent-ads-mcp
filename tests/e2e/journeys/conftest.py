@@ -38,15 +38,10 @@ from safent_ads.mcp.presentation.http import build_mcp_asgi_apps, build_mcp_serv
 from safent_ads.mcp.presentation.registry import ToolRegistry
 from tests.unit.composition.factories import build_api_settings
 
-# Pinned split (`tests/unit/mcp/presentation/test_catalog_registries_by_permission.py`,
-# contracts/mcp.md §3): 74 READ visible to `ver` (kit_services +3, Cloudflare
-# +2, both landed on this branch since this split was last counted here);
-# +19 PROPOSAL (20 pinned there minus 1 -- `propose_campaign_package` is
-# absent because `build_api_settings()` here leaves
-# `campaign_packages_enabled` at its default `False`, `composition/app.py`)
-# +3 CATALOG_WRITE (Cloudflare `upsert_dns_record`/`delete_dns_record`)
-# +1 CREATIVE_WRITE = 97 for `proponer`; +2 CONNECTION_WRITE = 99 for
-# `aprobar` (also what single-owner mode serves).
+# Pinned HTTP catalog with campaign packages disabled by build_api_settings():
+# runtime preparation adds two READ tools, two RUNTIME_WRITE tools and one
+# PROPOSAL tool to the previous 78/102/104 permission split. Keep the explicit
+# membership assertions in test_journey_permissions alongside these counts.
 READ_TOOL_COUNT = 80
 PROPOSE_TOOL_COUNT = 107
 APPROVE_TOOL_COUNT = 109
