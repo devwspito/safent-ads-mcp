@@ -5,6 +5,7 @@ import { reviewSchema, type LaunchPlan as Plan } from "@/api/queries/launchPlans
 import { getAdsBasePath } from "@/utils/basePath";
 import styles from "./LaunchPlans.module.css";
 import { PlanDocument } from "./PlanDocument";
+import { LaunchPreparation } from "./LaunchPreparation";
 
 export function LaunchPlanDetail({ plan, businessId }: { plan: Plan; businessId: string }) {
   const [selected, setSelected] = useState(0);
@@ -17,7 +18,7 @@ export function LaunchPlanDetail({ plan, businessId }: { plan: Plan; businessId:
     setBusy("review"); setMessage(null);
     try {
       await apiClient.post(`/launch-plans/${encodeURIComponent(plan.slug)}/review`, reviewSchema, { revision: plan.revision }, { business_id: businessId });
-      setMessage("Plan revisado y aprobado. No se han activado campañas, gasto ni envíos.");
+      setMessage("Plan aprobado y preparación encolada para el runtime. No se han activado campañas, gasto ni envíos.");
       await client.invalidateQueries({ queryKey: ["launch-plans", businessId] });
     } catch { setMessage("No se pudo guardar la revisión. Recarga el plan antes de reintentar."); }
     finally { setBusy(null); }
@@ -38,6 +39,7 @@ export function LaunchPlanDetail({ plan, businessId }: { plan: Plan; businessId:
   }
   return <article className={styles.card}>
     <div className={styles.header}><div><span className={styles.eyebrow}>Lanzamiento · preparación para revisión</span><h2>{plan.title}</h2><p>{plan.summary}</p></div><a className={styles.link} href={`${base}/eventos/${encodeURIComponent(plan.slug)}`} target="_blank" rel="noreferrer">Ver landing ↗</a></div>
+    <LaunchPreparation plan={plan} businessId={businessId} />
     {plan.proposal_id ? <p>Propuesta de campaña asociada: <code>{plan.proposal_id}</code>. Su aprobación se realiza en la tarjeta de propuesta.</p> : null}
     {plan.blockers.length ? <details className={styles.blockers} open><summary>Pendientes antes de activar ({plan.blockers.length})</summary><ul>{plan.blockers.map(item => <li key={item}>{item}</li>)}</ul></details> : null}
     <div className={styles.tabs} role="group" aria-label="Documentos del lanzamiento">{plan.documents.map((doc, index) => <button key={doc.title} type="button" aria-pressed={selected === index} onClick={() => setSelected(index)}>{doc.title}</button>)}</div>

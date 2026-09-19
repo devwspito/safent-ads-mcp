@@ -40,6 +40,18 @@
 .review { padding: var(--sp-4) 0; line-height: 1.6; }
 .review button { border: 1px solid var(--color-accent); border-radius: var(--radius-md); padding: var(--sp-3) var(--sp-4); background: var(--color-accent); color: var(--color-accent-on); cursor: pointer; }
 .review button:disabled { opacity: .6; cursor: wait; }
+.preparation { border: 1px solid var(--color-border-default); border-radius: var(--radius-md); padding: var(--sp-4); margin: var(--sp-5) 0; background: var(--color-bg-raised); line-height: 1.6; overflow-wrap: anywhere; }
+.preparation h3 { margin: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
+.preparation button, .preparation select { min-height: var(--touch-min); border: 1px solid var(--color-border-default); border-radius: var(--radius-sm); padding: var(--sp-2) var(--sp-3); background: var(--color-bg-surface); color: var(--color-text-primary); cursor: pointer; }
+.preparation button:disabled { opacity: .6; cursor: wait; }
+.connector { margin-top: var(--sp-4); }
+.connector summary { cursor: pointer; }
+.connector input { max-width: 100%; }
+.connector label { display: block; margin: var(--sp-3) 0; }
+.command { white-space: pre-wrap; overflow-wrap: anywhere; padding: var(--sp-3); background: var(--color-bg-sunken); border-radius: var(--radius-sm); font-size: var(--fs-xs); }
+.reply { display: grid; gap: var(--sp-2); margin: var(--sp-3) 0; }
+.reply textarea { width: 100%; min-height: 90px; background: var(--color-bg-surface); color: var(--color-text-primary); border: 1px solid var(--color-border-default); border-radius: var(--radius-sm); padding: var(--sp-3); font: inherit; }
 .summaryCard:focus-visible, .backLink:focus-visible, .card :focus-visible { outline: 2px solid var(--color-focus-ring); outline-offset: 3px; }
 @media (hover: hover) and (pointer: fine) { .summaryCard:hover { border-color: var(--color-accent); }.summaryCard:hover .detailLink { text-decoration: underline; } }
 @media(max-width:600px) { .header { flex-direction: column; }.card, .summaryCard, .document { padding: var(--sp-4); } }

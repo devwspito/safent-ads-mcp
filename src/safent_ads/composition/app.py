@@ -118,7 +118,7 @@ from safent_ads.integrations.cloudflare import (
 from safent_ads.integrations.store_api.rest import build_store_api_router
 from safent_ads.integrations.store_api.service import StoreApiService
 from safent_ads.launches.approval import LaunchApprovalStore
-from safent_ads.launches.review import build_launch_review_router
+from safent_ads.launches.review import LaunchPackStore, build_launch_review_router
 from safent_ads.logging_setup import configure_logging
 from safent_ads.mcp.application.caller_scope import CallerScopeResolverPort, Permission
 from safent_ads.mcp.application.creative_upload_port import CreativeUploadPort
@@ -269,6 +269,9 @@ from safent_ads.panel.presentation.cockpit_rest import build_cockpit_router
 from safent_ads.panel.presentation.rest import build_panel_router
 from safent_ads.proposals.presentation.rest import build_proposal_admin_router
 from safent_ads.rules.presentation.rest import build_rules_router
+from safent_ads.runtime.connections import RuntimeConnections
+from safent_ads.runtime.rest import build_runtime_router
+from safent_ads.runtime.store import RuntimeJobStore
 from safent_ads.settings.application.get_settings import GetSettings
 from safent_ads.settings.application.update_settings import UpdateSettings
 from safent_ads.settings.domain.value_objects import ActiveHours, DigestHour
@@ -462,12 +465,25 @@ def _include_business_integrations(
 ) -> None:
     _include_cloudflare_connection_router(app, container, settings)
     app.include_router(build_store_api_router(_build_store_api_service(container, settings)))
+    jobs = _build_runtime_jobs(container, settings)
+    app.include_router(build_runtime_router(jobs, RuntimeConnections(container.session_factory)))
     app.include_router(
         build_launch_review_router(
             settings.kit_dir,
             settings.creative_asset_storage_dir,
             LaunchApprovalStore(container.session_factory),
+            jobs,
         )
+    )
+
+
+def _build_runtime_jobs(container: Container, settings: ApiSettings) -> RuntimeJobStore:
+    return RuntimeJobStore(
+        container.session_factory,
+        CampaignDraftStore(
+            container.session_factory, container.clock, settings.google_channels_enabled
+        ),
+        LaunchPackStore(settings.kit_dir, settings.creative_asset_storage_dir).revision,
     )
 
 
@@ -704,6 +720,7 @@ def _build_mcp_registry_and_dispatcher(
         package_services=package_services,
         cloudflare_services=_build_cloudflare_tool_services(container, settings),
         store_api_service=_build_store_api_service(container, settings),
+        runtime_jobs=_build_runtime_jobs(container, settings),
         google_tag_manager_services=_build_google_tag_manager_tool_services(container, write_port),
         kit_services=kit_services,
         enabled_google_channels=settings.google_channels_enabled,

@@ -26,7 +26,7 @@ function renderPlan(path = "/propuestas?business_id=biz_ejemplo") {
 }
 
 describe("Launch plans", () => {
-  beforeEach(() => setMockSessionForTests(true));
+  beforeEach(() => { setMockSessionForTests(true); server.use(http.get(`${API_BASE}/runtime/connections`, () => HttpResponse.json({ items: [] }))); });
 
   it("lists only a summary; opens documents and video uploads on a dedicated detail route", async () => {
     const user = userEvent.setup();
@@ -60,7 +60,7 @@ describe("Launch plans", () => {
     }));
     renderPlan("/propuestas/lanzamiento/opening?business_id=biz_ejemplo");
     await user.click(await screen.findByRole("button", { name: "Aprobar plan · sin activar campañas" }));
-    expect(await screen.findByText(/Plan revisado y aprobado/)).toBeInTheDocument();
+    expect(await screen.findByText(/Plan aprobado y preparación encolada/)).toBeInTheDocument();
     expect(approved).toBe(true);
   });
 

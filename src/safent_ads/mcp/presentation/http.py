@@ -76,12 +76,12 @@ _MAX_MCP_BODY_BYTES = 13_000_000
 _DEFAULT_BRAND_NAME = "tu negocio"
 _DEFAULT_PANEL_HOST = "tu dominio"
 _MCP_INSTRUCTIONS_TEMPLATE = """\
-Sistema de anuncios de {brand_name}. Este servidor da acceso, no criterio: usa tu stack
-nativo para todo lo demás.
-
+Sistema de anuncios de {brand_name}: herramientas; usa tu stack nativo para lo demás.
+Encargos del panel: list_runtime_jobs -> claim_runtime_job -> heartbeat_runtime_job
+-> propose_runtime_result. Sólo preparación; no autoriza gasto. Un conector activo
+es necesario para recibir encargos sin un mensaje del usuario.
 Flujo: cuentas conectadas -> oferta o brief -> borrador o propuesta -> aprobación
 humana en el panel ({panel_host}) -> verificación.
-
 1. Antes de proponer nada, mira qué hay: `list_businesses`, `list_platform_accounts`,
    `get_portfolio_overview`, `list_offerings`.
 2. Si falta una cuenta de Meta o Google, usa `connect_platform_account` (sólo permiso
@@ -91,7 +91,8 @@ humana en el panel ({panel_host}) -> verificación.
    propuesta o un activo pendiente: nunca publica, gasta ni cambia nada por sí sola.
 4. Esas herramientas llevan `_meta["anthropic/requiresUserInteraction"]`: tu arnés pide
    confirmación antes de llamarlas.
-5. El dueño aprueba en el panel; sólo entonces se ejecuta algo de verdad.
+5. La aprobación editorial de un lanzamiento encola preparación para el runtime.
+   La aprobación operativa es distinta y conserva los controles de ejecución existentes.
 6. Después de una aprobación, verifica con `get_proposal` o `search_decision_log`.
 7. REVISIÓN PREVIA OBLIGATORIA antes de proponer una campaña o un paquete:
    (a) `search_competitor_ads` para los anuncios recientes de la competencia en el país;

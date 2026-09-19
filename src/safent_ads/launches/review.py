@@ -23,6 +23,7 @@ from safent_ads.iam.presentation.dependencies import CURRENT_OWNER, Authenticate
 from safent_ads.iam.presentation.errors import ApiError
 from safent_ads.launches.approval import LaunchApprovalStore
 from safent_ads.panel.presentation.deps import require_business_access
+from safent_ads.runtime.store import RuntimeJobStore
 
 BusinessDep = Annotated[str, Depends(require_business_access)]
 OwnerDep = Annotated[AuthenticatedOwner, CURRENT_OWNER]
@@ -128,21 +129,15 @@ class LaunchPackStore:
 
 
 def build_launch_review_router(
-    kit: Path | None, assets: Path, approvals: LaunchApprovalStore | None = None
+    kit: Path | None, assets: Path, approvals: LaunchApprovalStore | None = None,
+    jobs: RuntimeJobStore | None = None,
 ) -> APIRouter:
     router = APIRouter(tags=["launch-review"])
     store = LaunchPackStore(kit, assets)
 
     @router.get("/api/v1/launch-plans")
     async def list_plans(business_id: BusinessDep) -> dict[str, Any]:
-        items = await asyncio.to_thread(store.list, business_id)
-        for item in items:
-            item["review"] = (
-                await approvals.status(business_id, item["slug"], item["revision"])
-                if approvals
-                else {"approved": False, "approved_at": None}
-            )
-        return {"items": items}
+        return await _reviewed_plans(store, business_id, approvals, jobs)
 
     @router.post("/api/v1/launch-plans/{slug}/review")
     async def approve_plan(
@@ -153,7 +148,16 @@ def build_launch_review_router(
         revision = await asyncio.to_thread(store.revision, slug, business_id)
         if revision != body.revision:
             raise _error(409, "El plan ha cambiado. Recarga y revisa la nueva versión.")
+        if jobs:
+            plan = await asyncio.to_thread(store.detail, slug, business_id)
+            if plan["revision"] != body.revision:
+                raise _error(409, "El plan ha cambiado. Recarga y revisa la nueva versión.")
+            return await approvals.approve(
+                business_id, slug, revision, owner.owner_id, plan=plan
+            )
         return await approvals.approve(business_id, slug, revision, owner.owner_id)
+
+    _include_existing_preparation(router, store, approvals, jobs)
 
     @router.get("/api/v1/launch-plans/{slug}/videos/{slot}")
     async def video(slug: str, slot: str, business_id: BusinessDep) -> FileResponse:
@@ -200,6 +204,46 @@ def build_launch_review_router(
 
     _include_public_preview(router, store)
     return router
+
+
+async def _reviewed_plans(
+    store: LaunchPackStore, business_id: str,
+    approvals: LaunchApprovalStore | None, jobs: RuntimeJobStore | None,
+) -> dict[str, Any]:
+    items = await asyncio.to_thread(store.list, business_id)
+    for item in items:
+        item["review"] = (
+            await approvals.status(business_id, item["slug"], item["revision"])
+            if approvals else {"approved": False, "approved_at": None}
+        )
+        item["preparation"] = None
+        if jobs:
+            history = (await jobs.list(business_id, item["slug"]))["items"]
+            item["preparation"] = next(
+                (job for job in history if job["revision"] == item["revision"]), None
+            )
+    return {"items": items}
+
+
+def _include_existing_preparation(
+    router: APIRouter, store: LaunchPackStore,
+    approvals: LaunchApprovalStore | None, jobs: RuntimeJobStore | None,
+) -> None:
+    @router.post("/api/v1/launch-plans/{slug}/prepare")
+    async def prepare_existing(
+        slug: str, business_id: BusinessDep, owner: OwnerDep, body: ReviewBody
+    ) -> dict[str, Any]:
+        # Explicit repair for old editorial approvals; GET never starts work.
+        if not jobs or not approvals:
+            raise _error(503, "Preparación no disponible.")
+        plan = await asyncio.to_thread(store.detail, slug, business_id)
+        if plan["revision"] != body.revision:
+            raise _error(409, "El plan ha cambiado. Recarga y revisa la nueva versión.")
+        if not (await approvals.status(business_id, slug, body.revision))["approved"]:
+            raise _error(409, "Primero debes aprobar esta versión del plan.")
+        return await approvals.approve(
+            business_id, slug, body.revision, owner.owner_id, plan=plan
+        )
 
 
 def _include_public_preview(router: APIRouter, store: LaunchPackStore) -> None:
