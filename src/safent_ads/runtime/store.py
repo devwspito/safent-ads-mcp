@@ -198,11 +198,12 @@ class RuntimeJobStore:
             if draft:
                 blockers.extend("Falta en el borrador: " + name for name in draft["missing_fields"])
             state = "blocked" if blockers and report.outcome == "prepared" else report.outcome
+            previous = row["result"] or {}
             result = {
                 "summary": report.summary,
                 "blockers": list(dict.fromkeys(blockers)),
-                "draft_id": draft["draft_id"] if draft else None,
-                "draft_revision": draft["revision"] if draft else None,
+                "draft_id": draft["draft_id"] if draft else previous.get("draft_id"),
+                "draft_revision": draft["revision"] if draft else previous.get("draft_revision"),
                 "report_hash": report_hash,
                 "published": False,
                 "activation_blockers": row["context"].get("blockers", []),
@@ -311,4 +312,6 @@ class RuntimeJobStore:
         self._holder(row, holder, lease)
         if row["state"] != "running" or not row["lease_valid"]:
             raise runtime_error("RUNTIME_LEASE_LOST")
+        if not await self._current(row):
+            raise runtime_error("RUNTIME_PLAN_CHANGED")
         return row

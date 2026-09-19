@@ -10,8 +10,10 @@ import pytest
 from jsonschema import Draft202012Validator
 from pydantic import ValidationError
 
-from safent_ads.mcp.application.caller_scope import Permission
+from safent_ads.mcp.application.caller_scope import CallerScope, Permission
+from safent_ads.mcp.application.errors import BusinessForbiddenError, ForbiddenScopeError
 from safent_ads.mcp.presentation.catalog import registries_by_permission
+from safent_ads.mcp.presentation.dispatcher import ToolDispatcher
 from safent_ads.mcp.presentation.registry import ToolClass, ToolRegistry
 from safent_ads.mcp.presentation.runtime_tools import JobReportArgs, build_runtime_tools
 from safent_ads.runtime.bridge import (
@@ -185,3 +187,27 @@ async def test_revocation_terminates_the_running_cli(tmp_path, monkeypatch):
     ) as client:
         with pytest.raises(httpx.HTTPStatusError):
             await asyncio.wait_for(run_job(client, job, "codex", "fake", 60), timeout=5)
+
+
+@pytest.mark.parametrize("denial", ["scope", "business"])
+async def test_runtime_coordination_enforces_oauth_scope_and_business(denial):
+    store = AsyncMock()
+    quota = AsyncMock()
+    quota.check_and_consume.return_value = True
+    dispatcher = ToolDispatcher(registry=ToolRegistry(build_runtime_tools(store)), quota=quota)
+    business = str(uuid4())
+    caller = CallerScope(
+        "person:test",
+        frozenset({business if denial == "scope" else str(uuid4())}),
+        Permission.PROPOSE,
+        "Operator",
+        frozenset({"ads:read"} if denial == "scope" else {"ads:read", "ads:propose"}),
+    )
+    error = ForbiddenScopeError if denial == "scope" else BusinessForbiddenError
+    with pytest.raises(error):
+        await dispatcher.dispatch(
+            "claim_runtime_job",
+            {"business_id": business, "runtime": "codex", "instance_id": "test"},
+            caller_scope=caller,
+        )
+    store.claim.assert_not_called()
