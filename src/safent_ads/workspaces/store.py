@@ -219,7 +219,8 @@ class WorkspaceStore:
                     e = (
                         (
                             await session.execute(
-                                text("""SELECT id,outcome,error_code,entity_ref,applied_value
+                            text("""SELECT id,outcome,error_code,entity_ref,applied_value,
+                        created_external_id
                         FROM executions WHERE business_id=:b AND proposal_id=:id
                         ORDER BY created_at DESC LIMIT 1"""),
                                 {"b": UUID(business), "id": row["proposal_id"]},
@@ -234,6 +235,7 @@ class WorkspaceStore:
                             "outcome": e["outcome"],
                             "error_code": e["error_code"],
                             "entity_ref": e["entity_ref"],
+                            "created_external_id": e["created_external_id"],
                             "applied_value": e["applied_value"],
                         }
                 campaigns.append(

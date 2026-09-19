@@ -13,7 +13,7 @@ const detailSchema = workspaceSchema.extend({
   accounts: z.array(z.object({ account_ref: z.string(), platform: z.enum(["meta", "google"]), external_account_id: z.string(), currency: z.string(), status: z.string() })),
   campaigns: z.array(z.object({ draft: campaignDraftSchema,
     proposal: z.object({ id: z.string(), state: z.string(), diff_hash: z.string(), expires_at: z.string() }).nullable(),
-    execution: z.object({ id: z.string(), outcome: z.string(), error_code: z.string().nullable(), entity_ref: z.string(), applied_value: z.unknown() }).nullable(),
+    execution: z.object({ id: z.string(), outcome: z.string(), error_code: z.string().nullable(), entity_ref: z.string(), created_external_id: z.string().nullable(), applied_value: z.unknown() }).nullable(),
     step: z.object({ state: z.string(), label: z.string(), authorizes_spend: z.literal(false) }),
   })),
   campaigns_has_more: z.boolean(),

@@ -2,10 +2,12 @@
 
 import asyncio
 from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import httpx
 import pytest
 from fastapi import FastAPI
+from sqlalchemy import text
 from tests.integration.composition.test_offerings_rest import (
     container as container,  # noqa: PLC0414
 )
@@ -20,11 +22,88 @@ from safent_ads.mcp.application.caller_scope import CallerScope, Permission
 from safent_ads.mcp.application.errors import BusinessForbiddenError
 from safent_ads.opportunities.domain.campaign_draft import DraftError, DraftFields
 from safent_ads.opportunities.infrastructure.campaign_drafts_sql import CampaignDraftStore
+from safent_ads.runtime.contracts import RuntimeResult
+from safent_ads.runtime.store import RuntimeJobStore, enqueue_job
 from safent_ads.workspaces.contracts import WorkspaceBrief
 from safent_ads.workspaces.presentation import build_workspace_router
 from safent_ads.workspaces.store import WorkspaceStore
 
 pytestmark = pytest.mark.integration
+
+
+async def test_runtime_complete_draft_advances_once_without_video_or_page(
+    container, two_businesses, authenticated_session
+):
+    service = store(container)
+    business = str(two_businesses.business_a)
+    connection = uuid4()
+    async with container.session_factory.begin() as session:
+        await session.execute(
+            text("""INSERT INTO platform_connections
+            (id,business_id,owner_id,platform) VALUES(:id,:b,:owner,'meta')"""),
+            {
+                "id": connection,
+                "b": two_businesses.business_a,
+                "owner": authenticated_session.owner_id,
+            },
+        )
+        account = (
+            await session.execute(
+                text("""INSERT INTO platform_accounts
+            (business_id,platform,connection_id,external_account_id,currency,timezone,api_tier,status)
+            VALUES(:b,'meta',:connection,:external,'EUR','Europe/Madrid','meta_limited','ACTIVE')
+            RETURNING account_ref"""),
+                {
+                    "b": two_businesses.business_a,
+                    "connection": connection,
+                    "external": "act_" + str(uuid4().int)[:15],
+                },
+            )
+        ).scalar_one()
+        job = await enqueue_job(
+            session,
+            business,
+            {
+                "slug": "launch",
+                "revision": "a" * 64,
+                "title": "Launch",
+                "blockers": [],
+                "documents": [],
+                "video_slots": [],
+            },
+        )
+    runtime = RuntimeJobStore(container.session_factory, service.drafts)
+    claim = (await runtime.claim(business, "codex"))["job"]
+    assert claim["workspace"]["id"] == job["workspace_id"]
+    report = RuntimeResult(
+        outcome="blocked",
+        summary="Video pending",
+        blockers=["Video pending"],
+        campaign=DraftFields(
+            title="Launch",
+            platform="meta",
+            account_ref=account,
+            offering_id=str(two_businesses.offering_a),
+            objective="Leads",
+            daily_budget={"amount": "15", "currency": "EUR"},
+            duration_days=7,
+            success_criterion="Customers",
+            kill_criterion="Budget",
+            angle="Invitation",
+            targeting_seed="Local",
+            landing_url="https://example.com/event",
+        ),
+    )
+    first = await runtime.report(business, job["id"], "codex", claim["lease_token"], report)
+    repeated = await runtime.report(business, job["id"], "codex", claim["lease_token"], report)
+    assert first["state"] == "prepared", first
+    assert first["result"]["proposal_id"] == repeated["result"]["proposal_id"]
+    assert first["result"]["blockers"] == []
+    assert "Video pending" in first["result"]["activation_blockers"]
+    view = await service.get(business, job["workspace_id"])
+    assert view["campaigns"][0]["step"]["state"] == "approval"
+    assert view["campaigns"][0]["execution"] is None
+    assert len(view["activity"]) == 1
 
 
 def store(container):

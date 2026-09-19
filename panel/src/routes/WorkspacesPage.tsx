@@ -33,7 +33,7 @@ function WorkspaceList({ businessId }: { businessId: string }) {
     {query.isLoading && <p role="status">Cargando proyectos…</p>}
     {query.isError && <p role="alert">No se pudo cargar el trabajo. <button onClick={() => void query.refetch()}>Reintentar</button></p>}
     <div className={styles.grid}>{query.data?.items.map(item => <Link className={styles.card} key={item.id} to={`/trabajo/${item.id}?business_id=${businessId}`}>
-      <span className={styles.status}>{item.campaign_count} campañas en preparación o revisión</span><h2>{item.brief.title}</h2><p>{item.brief.objective || "Completa el objetivo y los datos del proyecto."}</p><span>Abrir proyecto →</span>
+      <span className={styles.status}>{item.campaign_count} campañas vinculadas</span><h2>{item.brief.title}</h2><p>{item.brief.objective || "Completa el objetivo y los datos del proyecto."}</p><span>Abrir proyecto →</span>
     </Link>)}</div>
     {query.data?.items.length === 0 && <p>Aún no hay proyectos. Los nuevos borradores también aparecerán aquí automáticamente.</p>}
     {query.data?.has_more && <p>Se muestran los 200 proyectos más recientes. Puedes abrir otro mediante su enlace directo.</p>}
@@ -81,7 +81,7 @@ export function WorkspaceDetail({ workspace }: { workspace: Workspace }) {
         {item.proposal ? <>
           <p>Propuesta: {item.proposal.state}. {item.execution ? `Ejecución: ${item.execution.outcome}.` : "Todavía no hay un resultado de ejecución."}</p>
           {item.execution?.error_code && <p role="alert">{item.execution.error_code}</p>}
-          {item.execution?.outcome === "SUCCEEDED" && <p>Referencia verificada: {item.execution.entity_ref}</p>}
+          {item.execution?.outcome === "SUCCEEDED" && <p>Identificador de campaña: {item.execution.created_external_id ?? "Consulta el recibo de ejecución"}</p>}
           <div className={styles.actions}><Link className={styles.button} to={`/propuestas${suffix}&proposal_id=${item.proposal.id}`}>Ver decisión y aprobar</Link><Link to={`/campanas${suffix}`}>Ver campañas reales</Link></div>
         </> : <>
           <CampaignEditor key={item.draft.revision} workspace={workspace} draft={item.draft} />

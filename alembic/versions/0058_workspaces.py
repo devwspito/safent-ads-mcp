@@ -50,6 +50,14 @@ def upgrade() -> None:
     op.execute("""UPDATE campaign_drafts d SET workspace_id=w.id FROM workspaces w
         WHERE d.workspace_id IS NULL AND d.business_id=w.business_id
           AND w.workspace_key='draft:' || d.draft_key""")
+    # Carry existing structured intent and notes forward, but do not parse prose
+    # into new confirmations, spend caps, dates or authorization claims.
+    op.execute("""WITH latest AS (
+        SELECT DISTINCT ON (business_id,workspace_id) business_id,workspace_id,brief
+        FROM campaign_drafts ORDER BY business_id,workspace_id,updated_at DESC,id
+    ) UPDATE workspaces w SET brief=w.brief || jsonb_build_object(
+        'objective',latest.brief->'objective','notes',latest.brief->'notes')
+      FROM latest WHERE w.business_id=latest.business_id AND w.id=latest.workspace_id""")
 
 
 def downgrade() -> None:
