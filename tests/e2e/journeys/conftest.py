@@ -47,9 +47,9 @@ from tests.unit.composition.factories import build_api_settings
 # +3 CATALOG_WRITE (Cloudflare `upsert_dns_record`/`delete_dns_record`)
 # +1 CREATIVE_WRITE = 97 for `proponer`; +2 CONNECTION_WRITE = 99 for
 # `aprobar` (also what single-owner mode serves).
-READ_TOOL_COUNT = 78
-PROPOSE_TOOL_COUNT = 102
-APPROVE_TOOL_COUNT = 104
+READ_TOOL_COUNT = 80
+PROPOSE_TOOL_COUNT = 107
+APPROVE_TOOL_COUNT = 109
 
 BASE_URL = "https://ads.journeys.test"
 _TOKEN = "synthetic-journey-token"  # noqa: S105 - fixture bearer, never a real credential
