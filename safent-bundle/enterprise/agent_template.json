@@ -185,6 +185,11 @@
       "list_campaign_drafts": {"enabled": true, "approval": "auto"},
       "get_campaign_draft": {"enabled": true, "approval": "auto"},
       "propose_campaign_from_draft": {"enabled": true, "approval": "auto"},
+      "list_workspaces": {"enabled": true, "approval": "auto"},
+      "get_workspace": {"enabled": true, "approval": "auto"},
+      "propose_workspace": {"enabled": true, "approval": "auto"},
+      "propose_workspace_campaign": {"enabled": true, "approval": "auto"},
+      "propose_workspace_creation": {"enabled": true, "approval": "auto"},
       "list_calendar_events": {
         "enabled": true,
         "approval": "auto"
