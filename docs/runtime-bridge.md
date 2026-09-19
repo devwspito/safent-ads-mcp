@@ -61,7 +61,8 @@ the server. The bridge token is not inherited by the runtime process.
 
 The built-in adapter takes the approved snapshot and existing draft context and
 requests a schema-constrained result. Codex runs with ignored user configuration,
-an ephemeral session and read-only sandbox in a temporary directory; Claude runs
+an ephemeral session and read-only sandbox in a temporary directory, with shell,
+web search, apps, hooks and multi-agent tools explicitly disabled; Claude runs
 without built-in tools or MCP servers. These adapters prepare structured data only;
 they do not inherit the operator's broad MCP tools. Existing active MCP clients can
 use the job tools above with their own normal permission checks instead.

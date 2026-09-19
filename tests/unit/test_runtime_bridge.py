@@ -44,6 +44,10 @@ def test_runtime_commands_do_not_bypass_permissions_or_inherit_tools(tmp_path, r
     if runtime == "codex":
         assert command[command.index("--sandbox") + 1] == "read-only"
         assert "--ignore-user-config" in command
+        assert "features.shell_tool=false" in command
+        assert "features.apps=false" in command
+        assert "features.multi_agent=false" in command
+        assert 'web_search="disabled"' in command
     else:
         assert command[command.index("--tools") + 1] == ""
         assert "--strict-mcp-config" in command
