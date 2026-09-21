@@ -35,6 +35,7 @@ export const rulesHandlers = [
   }),
 
   http.get(`${API_BASE}/guardrails`, () => HttpResponse.json(listGuardrails())),
+  http.get(`${API_BASE}/guardrails/setup`, () => HttpResponse.json({ items: [] })),
 
   http.put(`${API_BASE}/guardrails/:id`, async ({ params, request }) => {
     const body = (await request.json()) as GuardrailUpdate;

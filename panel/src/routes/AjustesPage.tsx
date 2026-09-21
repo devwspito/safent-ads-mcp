@@ -6,6 +6,7 @@ import { useSettings, useUpdateSettings } from "@/api/queries/settings";
 import type { GuardrailUpdate } from "@/api/schemas/rules";
 import type { SettingsUpdate } from "@/api/schemas/settings";
 import { SpendLimitCard } from "@/components/settings/SpendLimitCard";
+import { InitialGuardrails } from "@/components/settings/InitialGuardrails";
 import { TopesSection } from "@/components/settings/TopesSection";
 import { TelegramPairingCard } from "@/components/connections/TelegramPairingCard";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -79,7 +80,7 @@ function BusinessAjustesPage({ businessId }: { businessId: string }) {
           data={guardrailsQuery.data}
           isEmpty={(data) => data.items.length === 0}
           emptyTitle="Sin límites configurados"
-          emptyBody="Conecta una cuenta para fijar cuánto puede gastar al día y al mes."
+          emptyBody="Configura abajo los límites de las cuentas conectadas."
         >
           {(data) => (
             <>
@@ -99,6 +100,7 @@ function BusinessAjustesPage({ businessId }: { businessId: string }) {
             </>
           )}
         </QueryBoundary>
+        <InitialGuardrails businessId={businessId} />
       </section>
 
       <TopesSection businessId={businessId} />

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { z } from "zod";
 import { apiClient } from "@/api/client";
 import { acknowledgedSchema } from "@/api/schemas/proposals";
 import {
@@ -45,8 +46,15 @@ export function useUpdateGuardrail(businessId: string) {
   return useMutation({
     retry: false,
     mutationFn: (input: { guardrailId: string; update: GuardrailUpdate }) =>
-      apiClient.put(`/guardrails/${input.guardrailId}`, guardrailSchema, input.update),
-    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["guardrails", businessId] }),
+      apiClient.put(`/guardrails/${encodeURIComponent(input.guardrailId)}`, guardrailSchema, input.update, { business_id: businessId }),
+    onSuccess: async () => { await Promise.all(["guardrails", "guardrails-setup"].map(key => queryClient.invalidateQueries({ queryKey: [key, businessId] }))); },
+  });
+}
+
+export function useGuardrailSetup(businessId: string) {
+  return useQuery({
+    queryKey: ["guardrails-setup", businessId], enabled: Boolean(businessId),
+    queryFn: () => apiClient.get("/guardrails/setup", z.object({ items: z.array(z.object({ account_ref: z.string(), platform: z.string(), platform_account_id: z.string(), currency: z.string(), guardrail: guardrailSchema.nullable() })) }), { business_id: businessId }),
   });
 }
 

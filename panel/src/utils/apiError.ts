@@ -9,6 +9,9 @@ import { ApiRequestError } from "@/api/client";
  */
 export function describeApiError(error: unknown): string {
   if (error instanceof ApiRequestError) {
+    if (error.code === "GUARDRAILS_NOT_CONFIGURED") {
+      return "Faltan los límites de seguridad de esta cuenta. Configúralos en Ajustes → Límites de gasto y vuelve a revisar la propuesta. No se ha aprobado ni ejecutado.";
+    }
     switch (error.status) {
       case 401:
         return "Tu sesión ha caducado. Vuelve a entrar.";

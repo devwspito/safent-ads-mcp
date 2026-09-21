@@ -77,6 +77,7 @@ from safent_ads.execution.domain.guardrails import (
     ScopeKind,
 )
 from safent_ads.execution.infrastructure.errors import (
+    IncompleteGuardrailSetError,
     MissingGuardrailSetError,
     UnknownEntityRefError,
 )
@@ -223,6 +224,12 @@ def build_execution_router(container: Container) -> APIRouter:  # noqa: PLR0915 
                 )
             except ProposalApprovalDeniedError as exc:
                 raise _denial_to_api_error(exc.reason.value, str(exc)) from exc
+            except (MissingGuardrailSetError, IncompleteGuardrailSetError) as exc:
+                raise ApiError(
+                    status_code=409,
+                    code="GUARDRAILS_NOT_CONFIGURED",
+                    message="Configura los límites de la cuenta en Ajustes antes de aprobar.",
+                ) from exc
             await session.commit()
         return {
             "authorization_id": result.authorization_id,
@@ -725,6 +732,13 @@ async def _approve_batch_item(
             "ok": False,
             "error_code": exc.reason.value,
             "message": str(exc),
+        }
+    except (MissingGuardrailSetError, IncompleteGuardrailSetError):
+        return {
+            "proposal_id": item.proposal_id,
+            "ok": False,
+            "error_code": "GUARDRAILS_NOT_CONFIGURED",
+            "message": "Configura los límites de la cuenta en Ajustes antes de aprobar.",
         }
     return {
         "proposal_id": item.proposal_id,

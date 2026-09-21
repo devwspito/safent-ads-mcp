@@ -13,6 +13,14 @@ from safent_ads.composition.app import create_app
 from safent_ads.composition.settings import ApiSettings
 
 
+def test_boot_fallback_uses_external_styles_under_strict_csp() -> None:
+    html = (Path(__file__).parents[2] / "panel/index.html").read_text()
+    assert "style=" not in html
+    assert "<style" not in html
+    assert 'href="/src/styles/fallback.css"' in html
+    assert 'class="panel-fallback"' in html
+
+
 def test_missing_panel_dist_leaves_api_routes_working(api_settings: ApiSettings) -> None:
     app = create_app(api_settings)
 
