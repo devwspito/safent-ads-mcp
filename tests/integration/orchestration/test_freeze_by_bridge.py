@@ -6,6 +6,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime, timedelta
+from uuid import uuid4
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
@@ -35,7 +36,8 @@ async def seeded(
     isolated_database_url: str,
 ) -> AsyncIterator[tuple[AsyncSession, BusinessId, PlatformAccount]]:
     engine = create_async_engine(isolated_database_url, pool_pre_ping=True)
-    entity_ref = campaign_ref(f"freeze-bridge-{id(engine)}", platform_value="google")
+    # Python can reuse object addresses between tests sharing this database.
+    entity_ref = campaign_ref(f"freeze-bridge-{uuid4().hex}", platform_value="google")
     session = AsyncSession(engine, expire_on_commit=False)
     business_id = BusinessId(await seed_entity(session, entity_ref))
     await session.commit()
