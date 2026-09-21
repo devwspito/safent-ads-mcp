@@ -62,6 +62,7 @@ async def test_ver_lists_only_the_pinned_read_catalog(
     assert len(names) == READ_TOOL_COUNT
     assert {"get_store_api_status", "get_store_catalog"} <= names
     assert {"list_runtime_jobs", "get_runtime_job"} <= names
+    assert {"list_workspaces", "get_workspace"} <= names
     assert {"claim_runtime_job", "heartbeat_runtime_job", "propose_runtime_result"}.isdisjoint(
         names
     )
@@ -105,6 +106,11 @@ async def test_proponer_reaches_the_proposal_tool_class(
         names = {tool.name for tool in tools.tools}
         assert len(names) == PROPOSE_TOOL_COUNT
         assert "propose_campaign_draft" in names
+        assert {
+            "propose_workspace",
+            "propose_workspace_campaign",
+            "propose_workspace_creation",
+        } <= names
         assert {"claim_runtime_job", "heartbeat_runtime_job", "propose_runtime_result"} <= names
 
         reply = await session.call_tool(

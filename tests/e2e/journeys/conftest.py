@@ -39,12 +39,12 @@ from safent_ads.mcp.presentation.registry import ToolRegistry
 from tests.unit.composition.factories import build_api_settings
 
 # Pinned HTTP catalog with campaign packages disabled by build_api_settings():
-# runtime preparation adds two READ tools, two RUNTIME_WRITE tools and one
-# PROPOSAL tool to the previous 78/102/104 permission split. Keep the explicit
+# Shared workspaces add two READ and three PROPOSAL tools to the runtime
+# preparation catalog (80/107/109). Keep the explicit
 # membership assertions in test_journey_permissions alongside these counts.
-READ_TOOL_COUNT = 80
-PROPOSE_TOOL_COUNT = 107
-APPROVE_TOOL_COUNT = 109
+READ_TOOL_COUNT = 82
+PROPOSE_TOOL_COUNT = 112
+APPROVE_TOOL_COUNT = 114
 
 BASE_URL = "https://ads.journeys.test"
 _TOKEN = "synthetic-journey-token"  # noqa: S105 - fixture bearer, never a real credential

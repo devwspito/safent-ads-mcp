@@ -55,8 +55,8 @@ from tests.unit.test_no_client_strings import has_client_string
 # connection_status`):
 # 75 READ / 20 PROPOSAL / 3 CATALOG_WRITE / 1 CREATIVE_WRITE visibles a
 # `proponer`/`aprobar`; `aprobar` ademas ve las 2 CONNECTION_WRITE.
-_EXPECTED_READ = 75
-_EXPECTED_PROPOSAL = 20
+_EXPECTED_READ = 77  # Workspace list/detail use the same tenant scope.
+_EXPECTED_PROPOSAL = 23  # Workspace context, draft and paused-review commands.
 _EXPECTED_CATALOG_WRITE = 3
 _EXPECTED_CREATIVE_WRITE = 1
 _EXPECTED_CONNECTION_WRITE = 2

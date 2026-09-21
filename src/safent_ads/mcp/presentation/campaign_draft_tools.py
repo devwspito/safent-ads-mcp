@@ -328,7 +328,8 @@ def build_draft_tools(
             "automáticamente (PAUSED) de sus campos ya guardados — no hace falta "
             "escribirlo a mano. Si falta algún campo realmente necesario (p.ej. "
             "meta_page_id en Meta) o el creation_plan explícito no es válido, el error "
-            "lista el campo exacto y un ejemplo mínimo válido. No aprueba ni ejecuta. "
+            "lista el campo exacto y un ejemplo mínimo válido. Meta no requiere página "
+            "ni vídeos para el contenedor pausado. No aprueba ni ejecuta. "
             "Tras promoción queda de sólo lectura; el usuario revisa la nueva propuesta.",
             DraftPromoteArgs,
             ToolClass.PROPOSAL,

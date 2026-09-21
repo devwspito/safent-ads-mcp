@@ -91,8 +91,7 @@ async def seeded_pending_proposal(isolated_database_url: str) -> AsyncIterator[_
         await SqlProposalRepository(session).save(proposal)
         await session.execute(
             text(
-                "INSERT INTO owners (id, email, password_hash) "
-                "VALUES (:id, :email, :password_hash)"
+                "INSERT INTO owners (id, email, password_hash) VALUES (:id, :email, :password_hash)"
             ),
             {
                 "id": str(owner_id),
@@ -208,6 +207,57 @@ async def test_approve_proposal_end_to_end_through_the_real_router(
         await container.aclose()
 
 
+@pytest.mark.parametrize("batch", [False, True])
+async def test_missing_limits_are_actionable_and_do_not_approve(
+    seeded_pending_proposal: _Seeded, isolated_database_url: str, batch: bool
+) -> None:
+    seed = seeded_pending_proposal
+    container = Container.build(build_api_settings(database_url=isolated_database_url))
+    try:
+        async with container.session_factory.begin() as session:
+            await session.execute(
+                text("DELETE FROM guardrails WHERE business_id=:b"), {"b": seed.business_id}
+            )
+        app = FastAPI()
+        app.state.container = container
+        app.include_router(build_execution_router(container))
+        body = {"proposal_id": seed.proposal_id, "diff_hash": seed.diff_hash}
+        async with httpx.AsyncClient(
+            transport=httpx.ASGITransport(app=app),
+            base_url="http://test",
+            cookies={SESSION_COOKIE_NAME: _RAW_TOKEN},
+        ) as client:
+            response = await client.post(
+                "/api/v1/proposals/batch/approve"
+                if batch
+                else f"/api/v1/proposals/{seed.proposal_id}/approve",
+                params={"business_id": str(seed.business_id)},
+                json={"items": [body]} if batch else body,
+            )
+        assert response.status_code == (207 if batch else 409), response.text
+        assert "GUARDRAILS_NOT_CONFIGURED" in response.text
+        async with container.session_factory() as session:
+            assert (
+                await session.scalar(
+                    text("SELECT state FROM proposals WHERE id=:p"), {"p": seed.proposal_id}
+                )
+                == "pending"
+            )
+            for query in (
+                "SELECT count(*) FROM approvals WHERE proposal_id=:p",
+                "SELECT count(*) FROM executions WHERE proposal_id=:p",
+            ):
+                assert (
+                    await session.scalar(
+                        text(query),
+                        {"p": seed.proposal_id},
+                    )
+                    == 0
+                )
+    finally:
+        await container.aclose()
+
+
 async def test_batch_undo_returns_the_real_id_and_is_idempotent_end_to_end(
     seeded_pending_proposal: _Seeded, isolated_database_url: str
 ) -> None:
@@ -290,8 +340,7 @@ async def test_batch_undo_returns_the_real_id_and_is_idempotent_end_to_end(
             row = (
                 await session.execute(
                     text(
-                        "SELECT undone_at, compensating_proposal_id FROM executions "
-                        "WHERE id = :id"
+                        "SELECT undone_at, compensating_proposal_id FROM executions WHERE id = :id"
                     ),
                     {"id": execution_id},
                 )

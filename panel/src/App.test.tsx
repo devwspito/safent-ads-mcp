@@ -20,6 +20,7 @@ function renderApp() {
 describe("App routing", () => {
   afterEach(() => document.querySelectorAll('meta[name="safent-ads-base-path"]').forEach(el => el.remove()));
   beforeEach(() => {
+    server.use(http.get(`${API_BASE}/workspaces`, () => HttpResponse.json({ items: [], has_more: false, contract_version: 1 })));
     setMockSessionForTests(false);
     window.history.pushState({}, "", "/");
   });
@@ -30,7 +31,7 @@ describe("App routing", () => {
     expect(screen.getByLabelText(/correo/i)).toBeInTheDocument();
   });
 
-  it("lands on /propuestas once authenticated and shows the four destinations in the fixed order", async () => {
+  it("lands on /trabajo once authenticated and shows the four destinations in the fixed order", async () => {
     setMockSessionForTests(true);
     renderApp();
 
@@ -38,16 +39,16 @@ describe("App routing", () => {
     const hrefs = within(nav)
       .getAllByRole("link")
       .map((el) => el.getAttribute("href")?.split("?")[0]);
-    expect(hrefs).toEqual(["/propuestas", "/campanas", "/resultados", "/ajustes"]);
-    expect(within(nav).getByRole("link", { name: /Propuestas/ })).toBeInTheDocument();
+    expect(hrefs).toEqual(["/trabajo", "/campanas", "/resultados", "/ajustes"]);
+    expect(within(nav).getByRole("link", { name: /Trabajo/ })).toBeInTheDocument();
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Propuestas", level: 1 })).toBeInTheDocument());
-    expect(window.location.pathname).toBe("/propuestas");
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Trabajo", level: 1 })).toBeInTheDocument());
+    expect(window.location.pathname).toBe("/trabajo");
 
     // 7 propuestas normales + 2 de creación de campaña real (companion 0.2.20) + 4 paquetes de
     // campaña de ejemplo (003-paquete-de-campana §T052; el cuarto es el de Máximo Rendimiento
     // sin anuncios de 005-google-campaign-types §T037).
-    const propuestasLink = within(nav).getByRole("link", { name: /Propuestas/ });
+    const propuestasLink = within(nav).getByRole("link", { name: /Trabajo/ });
     await waitFor(() => expect(within(propuestasLink).getByText("13")).toBeInTheDocument());
   });
 
@@ -66,8 +67,8 @@ describe("App routing", () => {
     setMockSessionForTests(true);
     renderApp();
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Propuestas", level: 1 })).toBeInTheDocument());
-    expect(window.location.pathname).toBe("/ads/propuestas");
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Trabajo", level: 1 })).toBeInTheDocument());
+    expect(window.location.pathname).toBe("/ads/trabajo");
     expect(requests).toContain("/ads/api/v1/auth/me");
     expect(screen.queryByLabelText(/contraseña/i)).not.toBeInTheDocument();
     const nav = screen.getByRole("navigation", { name: "Navegación principal" });
@@ -79,7 +80,7 @@ describe("App routing", () => {
     const user = userEvent.setup();
     renderApp();
 
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Propuestas", level: 1 })).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: "Trabajo", level: 1 })).toBeInTheDocument());
 
     await user.keyboard("2");
     await waitFor(() => expect(screen.getByRole("heading", { name: "Campañas", level: 1 })).toBeInTheDocument());
@@ -127,7 +128,7 @@ describe("App routing", () => {
     setMockSessionForTests(true);
     const user = userEvent.setup();
     renderApp();
-    await screen.findByRole("heading", { name: "Propuestas", level: 1 });
+    await screen.findByRole("heading", { name: "Trabajo", level: 1 });
     await user.keyboard("{Control>}k{/Control}");
     const input = screen.getByRole("combobox", { name: "Buscar una vista" });
     await user.type(input, "resultados");

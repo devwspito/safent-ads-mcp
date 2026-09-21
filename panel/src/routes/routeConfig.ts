@@ -10,13 +10,13 @@ export interface RouteDescriptor {
 }
 
 export const MAIN_ROUTES: RouteDescriptor[] = [
-  { path: "/propuestas", label: "Propuestas", shortcut: "1" },
+  { path: "/trabajo", label: "Trabajo", shortcut: "1" },
   { path: "/campanas", label: "Campañas", shortcut: "2" },
   { path: "/resultados", label: "Resultados", shortcut: "3" },
   { path: "/ajustes", label: "Ajustes", shortcut: "4" },
 ];
 
 /** Alcanzables (paleta de comandos) pero fuera de los cuatro destinos fijos — sin atajo numérico. */
-export const SECONDARY_ROUTES: RouteDescriptor[] = [{ path: "/propuestas/historial", label: "Historial", shortcut: "" }];
+export const SECONDARY_ROUTES: RouteDescriptor[] = [{ path: "/propuestas", label: "Decisiones pendientes", shortcut: "" }, { path: "/propuestas/historial", label: "Historial", shortcut: "" }];
 
 export const ALL_ROUTES: RouteDescriptor[] = [...MAIN_ROUTES, ...SECONDARY_ROUTES];

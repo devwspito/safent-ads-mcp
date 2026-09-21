@@ -3,6 +3,9 @@ import { ApiRequestError } from "@/api/client";
 import { describeApiError } from "./apiError";
 
 describe("describeApiError", () => {
+  it("missing limits identify setup, not a concurrent edit or success", () => {
+    expect(describeApiError(new ApiRequestError("limits", "GUARDRAILS_NOT_CONFIGURED", 409))).toMatch(/Ajustes.*No se ha aprobado ni ejecutado/);
+  });
   it("403 pide permiso, no un código", () => {
     expect(describeApiError(new ApiRequestError("forbidden", "FORBIDDEN", 403))).toBe("No tienes permiso para ver esto.");
   });

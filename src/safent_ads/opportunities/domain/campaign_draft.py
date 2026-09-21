@@ -242,8 +242,8 @@ def missing_fields(fields: DraftFields) -> tuple[str, ...]:
 
 
 def _default_meta_native(fields: DraftFields) -> dict[str, Any]:
-    if fields.meta_page_id is None:
-        raise DraftError("CAMPAIGN_DRAFT_INCOMPLETE", ("meta_page_id",))
+    # The campaign container has no Page/Instagram/video dependency. Those
+    # belong to ad creation and delivery validation, not paused preparation.
     return {
         "objective": _meta_objective_literal(fields.objective or ""),
         "buying_type": "AUCTION",

@@ -193,7 +193,9 @@ def _build_wrapper(
 ) -> Callable[..., Awaitable[dict[str, Any]]]:
     async def wrapper(args: Any, ctx: Context) -> dict[str, Any]:
         caller_scope = _caller_scope_from_context(ctx)
-        raw_arguments = args.model_dump(mode="json", by_alias=True)
+        # Preserve PATCH semantics through the SDK's first validation pass.
+        # Omitted fields are not explicit nulls (including nested draft fields).
+        raw_arguments = args.model_dump(mode="json", by_alias=True, exclude_unset=True)
         try:
             return await dispatcher.dispatch(tool_name, raw_arguments, caller_scope=caller_scope)
         except ToolDispatchError as exc:

@@ -282,6 +282,8 @@ from safent_ads.settings.presentation.rest import build_settings_router
 from safent_ads.shared.clock import Clock
 from safent_ads.shared.crypto.hkdf import derive_key
 from safent_ads.shared.ids import BusinessId
+from safent_ads.workspaces.presentation import build_workspace_router
+from safent_ads.workspaces.store import WorkspaceStore
 
 logger = structlog.get_logger(__name__)
 
@@ -1448,7 +1450,7 @@ def _build_mcp_surface(
 _GZIP_MINIMUM_SIZE_BYTES = 1024
 
 
-def create_app(
+def create_app(  # noqa: PLR0915 - composition root registers independently guarded routers
     settings: ApiSettings | None = None,
     *,
     caller_scope_resolver: CallerScopeResolverPort | None = None,
@@ -1563,6 +1565,10 @@ def create_app(
     # de `config/economics/<business>.yaml`/env (owner decision,
     # 0029_economics_inputs).
     app.include_router(build_offerings_router(container.session_factory))
+    app.include_router(build_workspace_router(WorkspaceStore(CampaignDraftStore(
+        container.session_factory, container.clock,
+        enabled_google_channels=resolved_settings.google_channels_enabled,
+    ))))
     app.include_router(
         build_campaign_drafts_router(
             CampaignDraftStore(

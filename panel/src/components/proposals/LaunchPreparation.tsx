@@ -36,6 +36,9 @@ export function LaunchPreparation({ plan, businessId }: { plan: LaunchPlan; busi
     <p>{job?.message ?? "Aprobar crea un encargo persistente. El runtime conectado lo recoge y devuelve un borrador real, con sus pendientes."}</p>
     {job?.state === "running" && job.lease_until && Date.parse(job.lease_until) < Date.now() ? <p role="status">Se ha perdido el contacto con el runtime. El trabajo se recuperará cuando vuelva a conectar.</p> : null}
     {job ? <p>Última actualización: <time dateTime={job.updated_at}>{new Date(job.updated_at).toLocaleString("es-ES")}</time> · Intentos: {job.attempts}</p> : null}
+    <a href={`${getAdsBasePath()}/trabajo${job?.workspace_id ? `/${job.workspace_id}` : ""}?business_id=${businessId}`} className={styles.link}>Continuar en el espacio de trabajo compartido</a>
+    {job?.result?.proposal_id ? <a className={styles.link} href={`${getAdsBasePath()}/propuestas?business_id=${businessId}&proposal_id=${job.result.proposal_id}`}>Revisar y aprobar creación en pausa</a> : null}
+    {job?.result?.preparation_error ? <p role="alert">No se pudo preparar la propuesta: {job.result.preparation_error}</p> : null}
     {job?.result?.draft_id ? <details><summary>Ver borrador de campaña · revisión {job.result.draft_revision}</summary><CampaignDrafts businessId={businessId} draftId={job.result.draft_id} /></details> : null}
     {job?.result?.blockers.length ? <ul>{job.result.blockers.map(item => <li key={item}>{item}</li>)}</ul> : null}
     <p>Esto prepara borradores en el panel. No publica anuncios, activa gasto ni envía WhatsApp.</p>

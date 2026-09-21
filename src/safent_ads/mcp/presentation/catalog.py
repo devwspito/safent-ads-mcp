@@ -107,6 +107,8 @@ from safent_ads.optimization.application.query_service import OptimizationQueryS
 from safent_ads.proposals.domain.google_channel_spec import GoogleAdvertisingChannelType
 from safent_ads.runtime.store import RuntimeJobStore
 from safent_ads.shared.clock import Clock
+from safent_ads.workspaces.presentation import build_workspace_tools
+from safent_ads.workspaces.store import WorkspaceStore
 
 # `ver` -> READ; `proponer` -> +PROPOSAL+CATALOG_WRITE+CREATIVE_WRITE;
 # `aprobar` -> ademas CONNECTION_WRITE. `aprobar` NO anade ninguna
@@ -492,6 +494,7 @@ def build_default_registry(
         for name, description, args_model in _CATALOG
     ]
     if campaign_drafts is not None:
+        definitions.extend(build_workspace_tools(WorkspaceStore(campaign_drafts)))
         definitions.extend(
             build_draft_tools(
                 campaign_drafts,

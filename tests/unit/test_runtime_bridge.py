@@ -68,10 +68,16 @@ def test_tokens_and_private_metadata_never_enter_model_context(monkeypatch):
             "id": "one",
             "context": {},
             "existing_drafts": [],
+            "workspace": {"revision": 2, "brief": {"schedule": "Confirmed date"}},
             "lease_token": "private",
             "holder": "secret",
         }
-    ) == {"id": "one", "context": {}, "existing_drafts": []}
+    ) == {
+        "id": "one",
+        "context": {},
+        "existing_drafts": [],
+        "workspace": {"revision": 2, "brief": {"schedule": "Confirmed date"}},
+    }
 
 
 @pytest.mark.parametrize("runtime", ["codex", "claude"])

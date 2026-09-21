@@ -36,6 +36,7 @@ from safent_ads.proposals.domain.google_channel_spec import GoogleAdvertisingCha
 from safent_ads.proposals.domain.proposal import ProposalInvariantError
 from safent_ads.shared.clock import Clock
 from safent_ads.shared.ids import BusinessId, EntityLevel, EntityRef
+from safent_ads.workspaces.adoption import ensure_workspace
 
 _LIST_LIMIT = 200
 
@@ -53,8 +54,14 @@ class CampaignDraftStore:
         self._enabled_google_channels = enabled_google_channels
 
     async def save(
-        self, business: str, key: str, revision: int | None, changes: DraftFields,
-        *, transaction: AsyncSession | None = None,
+        self,
+        business: str,
+        key: str,
+        revision: int | None,
+        changes: DraftFields,
+        *,
+        transaction: AsyncSession | None = None,
+        workspace_id: str | None = None,
     ) -> dict[str, Any]:
         async with self._save_session(transaction) as session:
             params = {"business": UUID(business), "key": key}
@@ -77,6 +84,12 @@ class CampaignDraftStore:
                 .mappings()
                 .one_or_none()
             )
+            if (
+                row is not None
+                and workspace_id is not None
+                and str(row["workspace_id"]) != workspace_id
+            ):
+                raise DraftError("CAMPAIGN_DRAFT_REFERENCE_NOT_FOUND")
             previous = {} if row is None else row["brief"]
             fields = DraftFields.model_validate(
                 {**previous, **changes.model_dump(mode="json", exclude_unset=True)}
@@ -100,9 +113,14 @@ class CampaignDraftStore:
             else:
                 if revision is not None:
                     raise DraftError("CAMPAIGN_DRAFT_NOT_FOUND")
+                if workspace_id is None:
+                    workspace_id = await ensure_workspace(
+                        session, business, "draft:" + key, fields.title
+                    )
+                params["workspace"] = UUID(workspace_id)
                 sql = (
-                    "INSERT INTO campaign_drafts(business_id,draft_key,brief) "
-                    "VALUES(:business,:key,CAST(:brief AS jsonb)) RETURNING *"
+                    "INSERT INTO campaign_drafts(business_id,draft_key,brief,workspace_id) "
+                    "VALUES(:business,:key,CAST(:brief AS jsonb),:workspace) RETURNING *"
                 )
             result = (
                 (await session.execute(text(sql), {**params, "brief": json.dumps(payload)}))
@@ -146,9 +164,15 @@ class CampaignDraftStore:
             return self._view(await self._row(session, business, draft_id, lock=False))
 
     async def promote(
-        self, business: str, draft_id: str, revision: int, *, proposed_by: str | None = None
+        self,
+        business: str,
+        draft_id: str,
+        revision: int,
+        *,
+        proposed_by: str | None = None,
+        transaction: AsyncSession | None = None,
     ) -> dict[str, Any]:
-        async with self._sessions.begin() as session:
+        async with self._save_session(transaction) as session:
             row = await self._row(session, business, draft_id, lock=True)
             if row["proposal_id"] is not None:
                 return self._view(row)
