@@ -54,7 +54,7 @@ COPY infra/native-mcp/requirements.lock /build/requirements.lock
 RUN uv venv /opt/google-ads-mcp && \
     uv pip sync --python /opt/google-ads-mcp/bin/python --require-hashes /build/requirements.lock
 
-FROM node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS panel-builder
+FROM node:25-bookworm-slim@sha256:81db02c4b671288a03915da9534dbd54f96d0e7c24d80ccc54f5b36b2e684370 AS panel-builder
 
 WORKDIR /panel
 # package.json + lockfile primero: cache de `npm ci` invalida solo cuando
