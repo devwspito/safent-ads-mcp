@@ -87,6 +87,8 @@ Al operar una cuenta o realizar una revisión autorizada, leer el último ciclo 
 
 Usar [la plantilla del ciclo](cycle.template.json) y [el registro de reglas](learning.template.json). No rellenar valores desconocidos con cero.
 
+Al cerrar una tanda, registrar la configuración y un periodo de estabilidad acordado. No encadenar cambios de creatividades, públicos o presupuestos por fluctuaciones tempranas: observar exposición, reservas y resultados cobrados antes de decidir otra intervención. Las excepciones son incidencias comprobadas, seguridad, capacidad u ofertas que vencen; registrar cada excepción. Estabilidad no garantiza salir del aprendizaje ni alcanzar rentabilidad.
+
 Un caso de éxito necesita periodo y línea base comparables, exposición y muestra, gasto, reservas, asistencia, cobro, descuento, contribución, cancelaciones/devoluciones y repetición por cohorte. Documentar estacionalidad, oferta, capacidad y cambios simultáneos. Una incidencia corregida o una reserva aislada acreditan una capacidad operativa; la rentabilidad y el efecto incremental requieren más evidencia.
 
 ## Referencias
