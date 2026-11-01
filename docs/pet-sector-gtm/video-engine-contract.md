@@ -15,3 +15,32 @@ Una prueba local de un modelo pequeño generó movimiento pero deformó un utens
 En hardware compartido: GPU inicialmente libre, exclusión por tanda y guardia de memoria/temperatura/telemetría. Si se interrumpe una prueba, conservar el fallo real; no rebajar protecciones ni ocultar una previsualización como pieza de alta calidad.
 
 Para validar el funnel: leer el destino efectivo de cada anuncio, recorrer ambas especies hasta el formulario y contrastar descuentos/horas. Abrir la página con HTTP200 no confirma el envío final. Las pruebas aisladas de ese envío tampoco son una cita real en producción; distinguir ambas evidencias explícitamente.
+
+## Aprendizaje de la segunda revisión visual
+
+Un síntoma visual físicamente absurdo invalida una referencia aunque la iluminación
+y el animal parezcan fotográficos. Se rechazó pelo supuestamente apelmazado que
+parecía rosetas enrolladas. El I2V puede conservar fielmente ese error: revisar la
+referencia antes de gastar GPU, documentar qué se observa y bloquear referencias
+rechazadas. No añadir problemas a mascotas reales para fabricar antes/después.
+
+Separar la cobertura editorial de la cobertura producida: veterinaria/perro,
+veterinaria/gato, peluquería/perro y peluquería/gato deben figurar por separado.
+Un ejemplo de peluquería no demuestra que veterinaria esté resuelta. El catálogo
+incorpora cambios de movilidad, salud bucal, revisión de vacunas, picor y viaje,
+con fuentes primarias y exclusiones por concepto. No convertirlos en diagnósticos
+ni extender una oferta de consulta a productos, pruebas o documentación.
+
+Aceptar un parámetro de imagen en una API no prueba que condicione el resultado.
+En un runtime fijado se comprobó que una variante destilada ignoraba el primer
+fotograma; el pipeline base sí lo codificaba. También se detectó un límite de
+resolución impuesto por el preprocesado y un camino VAE que evitaba el tiling.
+Guardar revisión de modelo/runtime, referencia, parámetros y resolución fuente;
+no llamar HD nativo a un lienzo ampliado. Mantener los fallos de memoria y las
+guardias, en vez de rebajar umbrales para terminar un render.
+
+Medir copys con la fuente real antes de producir, separar CTA/condiciones/aviso,
+y distinguir el origen por plano en montajes mixtos. Inventariar archivos y tomas
+originales: seis versiones editadas de un mismo vídeo no son seis rodajes.
+La transcripción automática ayuda a comprobar la locución y el descuento, pero no
+prueba expresividad, calidad sonora, claridad visual o rentabilidad comercial.
