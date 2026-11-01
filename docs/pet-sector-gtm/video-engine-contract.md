@@ -72,3 +72,13 @@ lectura específica del formato interno antiguo y manifiesto público válido. U
 reproducción real completó plan→cola→worker→needs_review con vídeo10s, sin publicar.
 Las44 pruebas incluyen ahora esa regresión. Un protocolo que inicializa o un
 archivo que existe no prueban por sí solos el recorrido completo del usuario.
+
+La capacidad depende también de la duración. En el perfil GB10 probado, una
+petición nativa de6s se paró por memoria antes del primer paso de difusión,
+aunque el VAE ya estaba separado. No relajar la guardia para completarla. Dos
+tomas de3s sí generaron un tramo montado de6s, con el último fotograma revisado
+de la primera como referencia de la segunda y procedencia de ambas conservada.
+No describir ese montaje como una única toma generada de6s ni prometer continuidad
+por aceptar una referencia: comprobar la unión, postura, manos, identidad y acción.
+La orquestación de continuación se está ejercitando por el operador; no se afirma
+que sea una capacidad automática del adaptador público.
