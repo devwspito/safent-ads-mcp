@@ -63,3 +63,12 @@ Las instrucciones negativas por escena ayudan con elementos ajenos, pero no
 sustituyen revisar anatomía, manos y objetos en todo el fragmento elegido. Una
 salida720p con planos480p conserva esa limitación: resolución de exportación,
 realismo, claridad del problema y aprobación comercial son criterios separados.
+
+La comprobación MCP completa debe incluir guiones personalizados por escena y
+material del encargo, no sólo el ejemplo por defecto. Se detectó un fallo entre
+planificación y cola por persistir campos del compilador dentro del brief. Se
+corrigió sin hacer permisiva la entrada pública: contrato de entrada persistido,
+lectura específica del formato interno antiguo y manifiesto público válido. Una
+reproducción real completó plan→cola→worker→needs_review con vídeo10s, sin publicar.
+Las44 pruebas incluyen ahora esa regresión. Un protocolo que inicializa o un
+archivo que existe no prueban por sí solos el recorrido completo del usuario.
