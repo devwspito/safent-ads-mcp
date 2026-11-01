@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "scope": "private_business_record",
+  "cycle_id": null,
+  "reviewed_at": null,
+  "vertical": null,
+  "hypothesis": null,
+  "baseline_period": null,
+  "evaluation_period": null,
+  "species": [],
+  "capacity_source": null,
+  "offer": {"price_source": null, "cost_basis": null, "missing_costs": [], "expires_at": null, "exclusions": []},
+  "concepts": [],
+  "checks": {"contract": null, "isolated_journey": null, "production_reads": null, "consent_matrix": null, "coupon": null, "media": null},
+  "publication": {"authorized_scope": null, "quota_readback": null, "configured_status": null, "review_status": null, "delivery_status": null, "readback_evidence": null},
+  "metrics": {"unit_definition": null, "spend": null, "unique_contacts": null, "confirmed_bookings": null, "attended": null, "paid_services": null, "second_paid_visits": null, "net_contribution": null, "attribution_basis": null, "limitations": []},
+  "intervention": null,
+  "result": null,
+  "learning_id": null,
+  "next_decision": null,
+  "owner": null,
+  "evidence_refs": []
+}

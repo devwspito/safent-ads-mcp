@@ -8,6 +8,8 @@ El MCP es el **puente**: da acceso a las cuentas, aplica las reglas, controla el
 único punto de escritura hacia las plataformas y deja auditoría de todo. La
 inteligencia la pone el agente. Este servidor no recorta ni guía al modelo.
 
+Proceso sectorial opcional: [GTM Engineering para negocios de mascotas](docs/pet-sector-gtm/README.md), con registros separados de aprendizaje privado y reglas reutilizables. Es documentación operativa, sin automatizaciones nuevas de publicación o revisión diaria.
+
 Nada se publica ni se gasta sin aprobación humana en el panel.
 
 ## Qué incluye
