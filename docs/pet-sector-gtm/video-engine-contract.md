@@ -82,3 +82,17 @@ No describir ese montaje como una única toma generada de6s ni prometer continui
 por aceptar una referencia: comprobar la unión, postura, manos, identidad y acción.
 La orquestación de continuación se está ejercitando por el operador; no se afirma
 que sea una capacidad automática del adaptador público.
+
+La selección editorial también necesita procedencia. Una generación de manto
+normal añadió una figura ajena al final del fondo. Se descartó esa cola y se
+montó únicamente una ventana inicial revisada, con ralentización e interpolación
+de movimiento registradas. Guardar ventana fuente, factor temporal, algoritmo,
+huella de origen/salida y motivo del descarte. Un plano ralentizado conserva su
+origen generado; no se convierte en grabación real. Nunca alterar la marcha,
+respiración o reacción de un animal para fabricar evidencia de dolor o enfermedad.
+
+La tanda posterior sustituyó las fuentes480p de los pilotos por fuentes que
+cubren720p y entregó las cuatro combinaciones servicio/especie. No equivale a
+aprobación de alta producción ni prueba de conversión. Mantener necesidades de
+revisión y destinos todavía desalineados como pendientes explícitos, aunque CI,
+protocolo y resolución pasen.
