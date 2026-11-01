@@ -1,5 +1,31 @@
 # Motor audiovisual: aprendizaje y contrato de integración
 
+## Rechazo creativo después de pasar controles técnicos
+
+Si el responsable rechaza imagen y guion, el índice vigente debe reflejar
+`rejected_by_owner` aunque existan exportaciones válidas, CI correcto y versiones
+históricas denominadas entrega. Conservar originales y causa; no reutilizar esas
+piezas como aprobadas ni confundir una prueba de protocolo con aceptación.
+
+La estructura problema/consecuencia/ayuda/acción no basta si sólo produce frases
+genéricas. Antes de generar, especificar una situación observable, la duda concreta
+del tutor, qué aporta realmente el servicio y qué plano respalda cada afirmación.
+Una mirada o un animal inmóvil no acreditan dolor; tampoco debe provocarse un
+síntoma para filmarlo. Distinguir hipótesis creativa, lenguaje observado de clientes
+y hechos de cuidado respaldados por fuentes.
+
+La duración se determina con la locución real. No forzar historias explicativas
+a diez segundos ni acelerar la voz para adaptarse a metraje ya producido. Ensayar
+una lectura y una muestra antes de multiplicar renders; valorar claridad,
+expresividad y coherencia con las imágenes, no sólo transcripción automática.
+
+Al recuperar un flujo anterior, inspeccionar salida real, código y configuración
+activa; una copia de README puede describir una versión obsoleta. Reutilizar el
+proveedor de voz de referencia no implica importar su portavoz, marca o diseño.
+Ejecutar la prueba aislada, sin reiniciar servicios ajenos, sin clonar personal real
+y sin fallback silencioso de vídeo a una imagen fija. Mantener oferta/caducidad
+separadas de la historia para impedir locuciones promocionales vencidas.
+
 Un contenedor MP4 puede ser un pase de imágenes. La petición de vídeo necesita metraje con movimiento del sujeto. El compositor de imágenes y el generador de metraje son capacidades distintas; el sistema no debe sustituir una por otra silenciosamente para declarar el encargo terminado.
 
 El motor compañero está en devwspito/safent-pet-gtm-engine, sin marcas ni datos de clientes en su código. Expone planificación/cola/consulta/cancelación por MCP stdio. Su manifiesto de exportación incluye negocio, especie, necesidad, fuentes, oferta, condiciones, caducidad, URL/contexto y procedencia de cada plano. La salida permanece needs_review y publication_authorized=false. Este documento no implica que el servidor ya esté registrado en el despliegue del MCP de Ads.
