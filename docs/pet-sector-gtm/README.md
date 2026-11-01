@@ -42,6 +42,10 @@ Estados de aprendizaje: `observacion`, `hipotesis`, `reproducido`, `validado_en_
 
 Registrar por concepto: situación concreta, lenguaje del tutor, consecuencia sustentada, solución disponible, prueba auténtica, especie, etapa, una acción y destino. Distinguir observación de clientes de una hipótesis del equipo.
 
+Investigar por separado el problema del animal y la fricción del tutor: interpretar el cambio, temor a hacer daño o a una experiencia estresante, incertidumbre de precio y expectativas de resultado. Usar fuentes profesionales para afirmaciones clínicas; entrevistas, preguntas y reseñas auténticas para lenguaje y objeciones. Los foros aportan hipótesis cualitativas, nunca pautas clínicas. Una encuesta extranjera no describe automáticamente la clientela local. Fechar cada fuente y comprobar su edición vigente antes de trasladar una cifra.
+
+Cerrar la redacción con comprobaciones de claridad, voz, utilidad, evidencia, concreción, emoción proporcionada y fricción. Documentar qué objeción resuelve cada bloque y qué capacidad real respalda la respuesta. No sustituir pruebas por testimonios, acreditaciones, diagnósticos o garantías inventados; la emoción se expresa sin culpabilizar al tutor ni asegurar consecuencias que no se conocen.
+
 Un vídeo de servicios debe permitir responder:
 
 1. En los primeros segundos, ¿qué situación concreta reconoce el tutor?
@@ -57,6 +61,14 @@ Perro y gato tienen recorridos propios cuando procede. No transferir pautas clí
 No inventar testimonios, casos, autoridad profesional ni antes/después. Una fotografía real de resultado no demuestra la causa previa ni un beneficio clínico. Las ilustraciones y simulaciones se identifican y no se presentan como casos reales. El profesional decide la atención apropiada; la publicidad no induce procedimientos innecesarios.
 
 ## Puertas previas a publicación
+
+Cada concepto pagado debe tener un contrato de continuidad: identificador de necesidad, especie/contexto, promesa, entrada efectiva, explicación y objeciones, elección corregible, datos conservados en la operación, confirmación, entrega del servicio/producto y siguiente cuidado pertinente. Especificar qué hace el sistema y qué debe realizar una persona. Una landing con un titular distinto no acredita el recorrido completo; tampoco lo acredita un guion de seguimiento todavía sin ejecutar.
+
+Comprobar los parámetros en el nivel correcto del objeto publicitario y leer la URL efectiva después de escribir. Un recibo de éxito puede no persistir un parámetro enviado en el nivel equivocado. Probar la entrada real del anuncio, no solo una URL de demostración escrita a mano. Si varias piezas comparten página, usar contextos permitidos y un fallback; no crear campañas/cupones nuevos para cada variante por defecto.
+
+El contexto recibido de un anuncio no es un diagnóstico ni un hecho declarado por el cliente. Mostrarlo como una elección corregible. Al cambiar de especie o producto, limpiar las suposiciones incompatibles y mantener precio, condiciones, consentimiento y disponibilidad válidos. Impedir cambios de contexto mientras se envía o después de confirmar una operación, hasta iniciar otra deliberadamente.
+
+La continuidad posterior requiere que la operación conozca el motivo, entregue lo prometido y explique el siguiente paso indicado. No convertir la retención en una compra, renovación o cita innecesaria; no presentar como automatizado un procedimiento humano. Mantener separado el experimento creativo del resultado comercial observado.
 
 - **Promesa:** precio, fecha, alcance, condiciones, capacidad, especie, texto visible y destino coinciden. La reserva sin coste no convierte el servicio en gratuito.
 - **Recorrido final:** comprobar el envío final, no solo que el HTML y el calendario abren. Ejercitar privacidad aceptada y las decisiones opcionales de medición: casilla marcada/sin marcar y aviso de cookies aceptado/rechazado.
