@@ -44,3 +44,22 @@ y distinguir el origen por plano en montajes mixtos. Inventariar archivos y toma
 originales: seis versiones editadas de un mismo vídeo no son seis rodajes.
 La transcripción automática ayuda a comprobar la locución y el descuento, pero no
 prueba expresividad, calidad sonora, claridad visual o rentabilidad comercial.
+
+## Resolución, memoria y comprobaciones que se aplicaron al motor
+
+El adaptador ahora registra dimensiones nativas por plano y rechaza reducciones
+silenciosas en el perfil nativo. En el runtime fijado se separó difusión y VAE:
+latentes safetensors con huella, salida del primer proceso y VAE teselado en otro
+proceso supervisado. La conversión puede reanudarse sin repetir el muestreo si
+coinciden referencias, parámetros y checksum. Un ensayo completo generó4s a
+736×1280 en566,9s en GB10, pico66°C, manteniendo45GiB libres como mínimo exigido
+por la guardia y sin relajar el tope térmico. Es un resultado de ese ensayo, no
+una promesa de rendimiento ni de calidad publicitaria universal.
+
+La diversidad de fotogramas excluye audio: una imagen fija con voz no pasa por
+vídeo. Fuentes con color distinto se normalizan antes de concatenar para evitar
+reinicios de filtros que pierdan muestras. Ambas regresiones tienen prueba real.
+Las instrucciones negativas por escena ayudan con elementos ajenos, pero no
+sustituyen revisar anatomía, manos y objetos en todo el fragmento elegido. Una
+salida720p con planos480p conserva esa limitación: resolución de exportación,
+realismo, claridad del problema y aprobación comercial son criterios separados.
