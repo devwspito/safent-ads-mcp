@@ -43,3 +43,18 @@ Distinguir cambio enviado, revisión pendiente, dato publicado y recorrido proba
 no fabricar reservas para completar el último paso. La evidencia de una muestra
 no se extrapola a todo el catálogo. Un editor accesible tampoco demuestra que una
 nueva publicación vaya a aprobarse cuando hay un aviso de restricción.
+
+
+Una ficha verificada puede conservar una restricción de publicaciones y cambios
+pendientes de aprobación. Verificar cada estado en su herramienta correspondiente.
+Si reconocer un rechazo produce error y el portal oficial no ofrece contenido
+apelable, conservar ambas evidencias y preparar un caso de soporte; no reiterar
+cambios, crear otra ficha ni fingir una apelación presentada. Un selector Sí/No
+no siempre permite vaciar un atributo: comprobar el efecto y cancelar valores
+no acreditados. Sólo Google puede resolver su restricción interna.
+
+Contrastar documentos vigentes con el titular, nombre comercial y dirección del
+perfil antes de enviarlos a soporte. Una extracción de texto con una discrepancia
+es un motivo para contrastar, no para alterar el documento o cambiar la ficha
+sin acreditar. Mantener archivos privados fuera de repositorios y registrar sólo
+referencias de evidencia. El estándar público conserva la regla; no el expediente.
