@@ -30,3 +30,16 @@ no activar campañas históricas o aumentar gasto para reparar una pausa.
 Búsqueda con recursos deubicación es una vía de acceso a anuncios locales enMaps;
 no supone emplazamiento exclusivo ni asegura impresiones. Distinguir configuración,
 elegibilidad y entrega real. [Documentación deGoogle](https://support.google.com/google-ads/answer/3246303?hl=es).
+
+En negocios con varios servicios, separar horario de apertura del establecimiento,
+atención de cada especialidad y huecos reservables. Registrar la fuente y fecha de
+confirmación del dueño. Los festivos con atención condicionada a citas necesitan
+una aclaración; una reserva no acredita apertura libre durante toda la tarde.
+
+La auditoría del perfil debe abrir destinos reales y una muestra de fichas de
+producto/servicio. Presencia de una URL o sello de perfil completo no demuestra
+que se pueda reservar ni que cada producto tenga variante, descripción y destino.
+Distinguir cambio enviado, revisión pendiente, dato publicado y recorrido probado;
+no fabricar reservas para completar el último paso. La evidencia de una muestra
+no se extrapola a todo el catálogo. Un editor accesible tampoco demuestra que una
+nueva publicación vaya a aprobarse cuando hay un aviso de restricción.
