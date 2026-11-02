@@ -142,3 +142,34 @@ Cuando el operador elige WhatsApp como recorrido principal, no imponer la salida
 Recoger datos mínimos que falten, aprovechando identidad verificada del canal sin suponer que siempre coincide con el tutor. Separar consentimiento de reserva del de marketing. Mantener canal propio en los contratos de cita, atribución recibida del webhook y estados separados de cita/envío/entrega; no etiquetar chats como landings ni inventar origen publicitario. Reconciliar escrituras ambiguas antes de repetirlas. Un adaptador disponible o número conectado no demuestra bot desplegado. La operación requiere webhook, estado/outbox durables, toma humana efectiva y pruebas de integración, no solo un guion conversacional.
 
 Cuando el operador rechaza voces y boca sintetizadas, registrar rejected_by_owner en la selección vigente y mantener prohibida su publicación. Conservar la procedencia sin seguir denominando aceptada la pieza. Revisar por separado muestra/transcripción de referencia, voz, detector/recorte y sincronización; limitar la siguiente comparación a voz antes de otra tanda de vídeo. Cambiar referencia y modelo a la vez permite comparar salidas, pero no atribuir causalmente una mejora al modelo. Registrar variantes, licencias de todos los pesos auxiliares, entorno y dudas de ASR. Una alternativa investigada, descargada o ejecutada son estados diferentes; ninguno acredita parecido o naturalidad por sí solo.
+
+### Identidad, oclusión y alternativas de producción
+
+Un rostro detectado no demuestra que la boca esté visible. Un ensayo sobre una
+grabación comercial dio detección positiva en todas las muestras aunque una
+bolsa y una mano tapaban parte del rostro. Revisar la actuación completa antes
+de sincronizar; separar esos planos como recurso visual y seleccionar otra
+ventana para el portavoz. No reconstruir a ciegas sobre oclusiones ni usar una
+salida sintética anterior como referencia fotográfica de identidad.
+
+Comparar original y salida en los mismos tiempos, además de reproducir la toma.
+Conservar referencias individuales y distinguir tres entregables: edición de
+boca sobre metraje real, avatar generado desde retrato y montaje híbrido. Si se
+conserva voz e imagen originales y solo se sintetiza el cierre fuera de cámara,
+declararlo así. Ese montaje no acredita clonación facial ni una actuación nueva.
+Un avatar corto con movimiento sí es una prueba de esa capacidad; no acredita
+todavía un anuncio terminado, parecido exacto, sincronización natural o ventas.
+
+Las guardias deben cubrir también muestreo y VAE. Pausas tras un paso completo
+pueden llegar tarde si hay picos dentro del bloque. Reducir la carga del proceso,
+usar VAE por lotes pequeños y pausas por bloque; conservar la parada externa y
+registrar todos los intentos fallidos. No extrapolar la viabilidad térmica de una
+toma corta a otra larga o a mayor resolución. Registrar resolución nativa,
+fotogramas y duración efectivos: algunos modelos recortan la petición según el
+audio y su compresión temporal.
+
+Antes de entregar, comprobar el primer fotograma y el cierre reales del MP4,
+no solo capturas intermedias. El relleno temporal por defecto puede introducir
+negro; la compensación de nivel y AAC pueden reintroducir picos aunque exista
+limitador. Verificar tras el último encode, preservar margen de audio y corregir
+sin presentar la revisión técnica como aprobación humana de voz o parecido.
