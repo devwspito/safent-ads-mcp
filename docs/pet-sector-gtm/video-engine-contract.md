@@ -179,3 +179,17 @@ no solo capturas intermedias. El relleno temporal por defecto puede introducir
 negro; la compensación de nivel y AAC pueden reintroducir picos aunque exista
 limitador. Verificar tras el último encode, preservar margen de audio y corregir
 sin presentar la revisión técnica como aprobación humana de voz o parecido.
+
+### Rechazo posterior a una segunda prueba
+
+Una nueva comparación puede volver a ser rechazada aunque use otro modelo.
+Actualizar el estado del candidato vigente y la página de revisión; no dejarlo
+como pendiente de revisión después de recibir un rechazo explícito. Si la
+respuesta no identifica un archivo dentro de varias pruebas de identidad y boca,
+registrar la ambigüedad y excluir conservadoramente ese grupo sin inventar
+valoraciones de otros portavoces o montajes. Conservar hashes y fuentes privadas.
+
+No afirmar que se ha conseguido una mejora porque se registró el rechazo.
+Antes de otra tanda completa, contrastar control original, parecido, voz y
+sincronización por separado. El aumento de resolución no demuestra corrección
+de identidad, y un cierre técnico de la tarea no es aceptación creativa.
