@@ -168,6 +168,12 @@ toma corta a otra larga o a mayor resolución. Registrar resolución nativa,
 fotogramas y duración efectivos: algunos modelos recortan la petición según el
 audio y su compresión temporal.
 
+La memoria disponible del sistema tampoco garantiza una asignación CUDA. Si la
+carga conjunta falla, probar la secuencia de descarga/cargaCPU admitida por el
+pipeline antes de reducir calidad o tocar recursos globales. Registrar el fallo
+y el modo de memoria que realmente completó; no describir dos ejecuciones con
+modos distintos como una configuración única probada.
+
 Antes de entregar, comprobar el primer fotograma y el cierre reales del MP4,
 no solo capturas intermedias. El relleno temporal por defecto puede introducir
 negro; la compensación de nivel y AAC pueden reintroducir picos aunque exista
