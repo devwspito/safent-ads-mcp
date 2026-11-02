@@ -122,3 +122,15 @@ cubren720p y entregó las cuatro combinaciones servicio/especie. No equivale a
 aprobación de alta producción ni prueba de conversión. Mantener necesidades de
 revisión y destinos todavía desalineados como pendientes explícitos, aunque CI,
 protocolo y resolución pasen.
+
+## Portavoces autorizados y respuesta rápida
+
+La exclusión predeterminada de clonar personal real solo cambia cuando el responsable lo solicita explícitamente para personas y uso identificados. Registrar esa autorización, identidad acreditada y alcance. No inferir identidad visual ni convertir autorización de producción en aprobación de cada publicación. Mantener muestras y huellas biométricas en almacenamiento privado, nunca en el MCP estándar.
+
+Distinguir voz condicionada por una referencia, clonación de voz, sincronización de boca sobre grabación y actuación completamente generada. Un parámetro sin muestra no clona una voz. Una boca regenerada no crea nueva postura, gesto o contexto. El guion debe concordar con el rodaje. Probar un clip corto antes de multiplicar formatos y someter voz y labios a reproducción humana; ASR, codecs correctos y fotogramas revisados son controles complementarios.
+
+Antes de instalar una skill, comprobar si ejecuta un modelo local, enruta a servicios externos o genera animaciones de HTML. No equivalen a la misma capacidad, costes ni tratamiento de datos. Revisar licencias de código, detector y pesos, fijar revisiones y aislar incompatibilidades sin modificar servicios compartidos.
+
+La respuesta rápida se prueba como comportamiento, no como promesa de conversión. Un bot puede funcionar con reglas: especie, intención, condiciones verificadas, catálogo/agenda reales y continuación en reserva. Una IA opcional clasifica intenciones permitidas; no inventa precios, huecos ni confirmaciones. Medir primera respuesta útil y finalización separadamente. Conservar atribución real del canal, no UTM artificiales en producción.
+
+La disponibilidad consultada es orientativa hasta confirmar. Un GET de huecos o enlace de reserva no crea una cita. Derivación a persona requiere una cola/notificación efectivamente entregada; devolver una bandera no basta. Deduplicación en memoria y vista local no acreditan persistencia ni integración WhatsApp. Antes de publicar: webhook, consentimiento/ventana de mensajería, outbox, recuperación tras reinicio, baja, traspaso humano, fallos de proveedor y atribución comprobada. Nunca usar citas falsas o eventos duplicados para probar conversión.

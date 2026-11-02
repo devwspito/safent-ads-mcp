@@ -108,3 +108,5 @@ Un caso de éxito necesita periodo y línea base comparables, exposición y mues
 - [Meta Blueprint: diversidad de concepto, mensaje, perfil y gancho](https://certifications.facebookblueprint.com/student/activity/708857-ask-the-experts-session).
 - [Engineering at Meta: Andromeda como etapa de recuperación de anuncios](https://engineering.fb.com/2026/10/28/ml-applications/meta-andromeda-next-gen-ads-retrieval-gpu-co-design/).
 - [Contrato de trabajo del MCP](../workspace-contract.md): continuar el proyecto existente, revisiones y recibos; no confundir un borrador guardado con publicación.
+
+El [contrato de vídeo](video-engine-contract.md#portavoces-autorizados-y-respuesta-rápida) incorpora pruebas de voz con referencia, alcance del lip-sync y criterios para distinguir un bot local funcional de una integración de mensajería operativa.
