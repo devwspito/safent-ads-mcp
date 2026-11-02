@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "scope": "anonymized_sector_rule",
+  "rule_id": null,
+  "state": "hipotesis",
+  "problem": null,
+  "rule": null,
+  "evidence_kind": null,
+  "tested_contexts": [],
+  "sample_and_period": null,
+  "counterexamples": [],
+  "limitations": [],
+  "acceptance_check": null,
+  "sanitized_evidence_refs": [],
+  "reviewed_at": null,
+  "next_review_trigger": null,
+  "withdrawal_condition": null
+}
